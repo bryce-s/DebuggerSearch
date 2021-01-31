@@ -68,9 +68,11 @@ class ProbeRsDebugAdapterTracker implements DebugAdapterTracker {
 
         if (message.command === 'variables') {
             let variables = message.body.variables;
-            let trackedVariables: Array<Variable> = new Array<Variable>()
+
+            let trackedVariables: Array<Variable> = new Array<Variable>();
             variables.forEach((variable: any) =>  trackedVariables.push(new Variable(variable.variablesReference))); 
             trackedVariables = trackedVariables.filter((variable) => variable.variablesReference !== 0);
+
             this.tracker.addVariables(trackedVariables, message.request_seq);
         }
         if (message.command === 'scopes') {
@@ -147,13 +149,18 @@ class StackTraverser implements VariableTracker {
     public addVariables(v: Array<Variable>, requestSeq: number) : void {
         let variableReference: number | undefined = this.openRequests.get(requestSeq);
         this.openRequests.delete(requestSeq);
+
         if (variableReference === undefined) {
             // this is an error.
             variableReference = 0;
         }
-        let children = this.variableMapping.get(variableReference);
-        children?.concat(v);
-        children?.forEach(child => this.activeVariablesReferences.add(child.variablesReference));
+
+        let childNodes: Variable[] | undefined = this.variableMapping.get(variableReference);
+        childNodes = childNodes?.concat(v);
+        this.variableMapping.set(variableReference, 
+                                (childNodes === undefined) ? new Array<Variable>().concat(v) : childNodes);
+
+        childNodes?.forEach(child => this.activeVariablesReferences.add(child.variablesReference));
     }
 
     public logRequest(seq: number, variableReference: number) {
