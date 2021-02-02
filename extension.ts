@@ -10,13 +10,13 @@ import { setFlagsFromString } from 'v8';
 
 
 export function activate(context: vscode.ExtensionContext) {
-    const trackerFactory = new ProbeRsDebugAdapterTrackerFactory();
+    const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
 }
 
 
 
-class ProbeRsDebugAdapterTrackerFactory implements DebugAdapterTrackerFactory {
+class VariableSearchDebugAdapterTrackerFactory implements DebugAdapterTrackerFactory {
     
     createDebugAdapterTracker(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterTracker> {
         console.log("Creating new debug adapter tracker");
@@ -37,8 +37,12 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
         // sending a message to the debug adapter
         //this.tracker.logRequest()
 
-        if (message.command === 'scopes') {
+        if (message.command === 'bryceWillsIt') {
+            this.tracker.searchTerm('hey', 'locals', false, 2);
+        }
 
+        if (message.command === 'scopes') {
+            console.log('scopes Online');
         }
         if (message.command === 'variables') {
             this.tracker.logRequest(message.seq, message.arguments.variablesReference);
@@ -63,7 +67,11 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
     onDidSendMessage(message: any) {
         console.log("Received message from debug adapter:\n", message);
 
-        if (message.command === 'variables') {
+        if (message.command === 'variables' && this.tracker.searchInProgress) {
+            // need to actually save the data and associate it with our variable being requested.
+            this.tracker.resumeSearch();
+        }
+        else if (message.command === 'variables') {
             let variables = message.body.variables;
 
             let trackedVariables: Array<Variable> = new Array<Variable>();
@@ -162,6 +170,8 @@ interface VariableTracker {
     // should serve as root nodes
     addScope(s: Scope): void;
 
+    resumeSearch(): void;
+
     searchInProgress: boolean;
 }
 
@@ -176,6 +186,8 @@ class StackTraverser implements VariableTracker {
     private variableInfoMapping: Map<number, Array<VariableInfo>> = new Map<number, Array<VariableInfo>>();
 
     private dfsStack: Array<Variable> = new Array<Variable>();
+
+
 
     searchInProgress: boolean = false;
     term: string = '';
@@ -221,12 +233,18 @@ class StackTraverser implements VariableTracker {
                 throw new Error('variable was undefined!');
             }
             this.dfsStack.push(variable);
-            this.traverseVariableTreeIterative(new Variable(locals.variablesReference), 
-                                               2, (s: string) => s === 'hey');
+            let bailOut: boolean = this.traverseVariableTreeIterative(2, (s: string) => s === 'hey');
+            if (bailOut) {
+                return;
+            }
         }
                 
         this.term = '';
         this.searchInProgress = false;
+    }
+
+    public resumeSearch() {
+        this.traverseVariableTreeIterative(2, (s: string) => s === 'hey');
     }
 
     // comp: do we want to regex? or just check if contains, etc.
@@ -240,7 +258,8 @@ class StackTraverser implements VariableTracker {
     }
 
     // there's two ways to enter this; the initial way , and a resume. Inital elt is preloaded
-    private traverseVariableTreeIterative(root: Variable, depth: number, comp: Function) {
+    // returns: should we bail out?
+    private traverseVariableTreeIterative(depth: number, comp: Function): boolean {
 
         // gonna be kinda tricky, since we need to 'start and stop...'
         if (this.dfsStack.length > 0) {
@@ -251,12 +270,31 @@ class StackTraverser implements VariableTracker {
             }
 
             // throw and push back in stack
-            if (!this.variableInfoMapping.has(root.variablesReference)) {
+            if (!this.variableInfoMapping.has(activeVariable.variablesReference)) {
                 // we need to populate this...
                 this.getVariableContents(activeVariable.variablesReference);
                 this.dfsStack.push(activeVariable);
-                // how to bail out?
+                return true;
             }
+            // good to go
+            let referenceNumber = activeVariable.variablesReference;
+
+            this.visited.add(referenceNumber);
+
+            let varInfo: VariableInfo[] | undefined = this.variableInfoMapping.get(referenceNumber);
+            if (varInfo === undefined) {
+                throw new Error('should not be undefined');
+            }
+
+            varInfo.forEach(info => {
+               if (info.variableReference !== 0 && !this.visited.has(info.variableReference)) {
+                    this.dfsStack.push(new Variable(info.variableReference));
+                    this.visited.add(info.variableReference);
+               }
+               if (comp(info.evaluateName) || comp(info.name)) {
+                    console.log('we found a result ^_^');
+               }
+            });
 
         }
 
@@ -264,12 +302,14 @@ class StackTraverser implements VariableTracker {
             this.term = '';
             this.searchInProgress = false;
         }
-
+        return false;
     }
+
 
     private getVariableContents(varRef: number) {
         if (vscode.debug.activeDebugSession === undefined) {
                 // we're not debugging
+                throw new Error('woof');
         }
         vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: varRef });
     }
