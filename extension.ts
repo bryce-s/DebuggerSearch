@@ -37,8 +37,8 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
         // sending a message to the debug adapter
         //this.tracker.logRequest()
 
-        if (message.command === 'bryceWillsIt') {
-            this.tracker.searchTerm('hey', 'locals', false, 2);
+        if (message.command === 'bryceWillsIt' ) {
+            this.tracker.logRequest(message.seq, message.arguments.variablesReference);
         }
 
         if (message.command === 'scopes') {
@@ -69,6 +69,12 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
         if (message.command === 'variables' && this.tracker.searchInProgress) {
             // need to actually save the data and associate it with our variable being requested.
+            let variables = message.body.variables;
+
+            this.tracker.addVariableData(variables.map(
+                (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName)
+                ), message.request_seq);
+
             this.tracker.resumeSearch();
         }
         else if (message.command === 'variables') {
@@ -79,12 +85,6 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
             trackedVariables = trackedVariables.filter((variable) => variable.variablesReference !== 0);
 
             this.tracker.addVariables(trackedVariables, message.request_seq);
-
-            if (this.tracker.searchInProgress) {
-                this.tracker.addVariableData(variables.map(
-                    (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName)
-                    ));
-            }
         }
         if (message.command === 'scopes') {
             //this.tracker.addScope();
@@ -92,6 +92,9 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
             message.body.scopes.forEach((s: any) => {
                 this.tracker.addScope(new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference));
             });
+            
+            // testing:
+            this.tracker.searchTerm('hey', 'locals', false, 2);
         }
 
         //vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: 3 });
@@ -159,7 +162,7 @@ interface VariableTracker {
     addVariables(v: Array<Variable>, requestSeq: number): void;
 
     // add variable info with full data
-    addVariableData(v: Array<VariableInfo>): void;
+    addVariableData(v: Array<VariableInfo>, requestSeq: number): void;
 
     // variablesReference has a pending variables request
     logRequest(seq: number, variableReference: number): void;
@@ -182,6 +185,8 @@ class StackTraverser implements VariableTracker {
     private openRequests: Map<number, number> = new Map<number, number>();
     private activeVariablesReferences: Set<number> = new Set<number>();
     private variableMapping: Map<number, Array<Variable>> = new Map<number, Array<Variable>>();
+
+    private variableDataRequested: Set<number> = new Set<number>();
 
     private variableInfoMapping: Map<number, Array<VariableInfo>> = new Map<number, Array<VariableInfo>>();
 
@@ -209,8 +214,17 @@ class StackTraverser implements VariableTracker {
         childNodes?.forEach(child => this.activeVariablesReferences.add(child.variablesReference));
     }
     
-    public addVariableData(v: Array<VariableInfo>): void {
+    public addVariableData(v: Array<VariableInfo>, requestSeq: number): void {
+        // going to need to do something like open requests, from above.
+        let variableReference: number | undefined = this.openRequests.get(requestSeq);
+        this.openRequests.delete(requestSeq);
 
+        if (variableReference === undefined) {
+            // error
+            throw new Error('no reference to map to from variable');
+        }
+        // check if it exists first?
+        this.variableInfoMapping.set(variableReference, v);
     }
 
     public logRequest(seq: number, variableReference: number) {
@@ -220,9 +234,14 @@ class StackTraverser implements VariableTracker {
     public searchTerm(t: string, scopeName?: string, regex?: boolean, depth?: number): any {
         this.searchInProgress = true;
         this.term = t;
-        
+
         if (scopeName === 'locals') {
-            let locals: Scope | undefined = this.scopes.find((scope) => scope.name === 'locals');
+
+            if (this.scopes === undefined) {
+                throw new Error("we need to ensure scopes are populated by this point");
+            }
+
+            let locals: Scope | undefined = this.scopes.find((scope) => scope.name === 'Locals');
             if (locals === undefined) {
                 // error, not a valid scope
                 locals = this.scopes[0];
@@ -262,7 +281,7 @@ class StackTraverser implements VariableTracker {
     private traverseVariableTreeIterative(depth: number, comp: Function): boolean {
 
         // gonna be kinda tricky, since we need to 'start and stop...'
-        if (this.dfsStack.length > 0) {
+        while (this.dfsStack.length > 0) {
             let activeVariable: Variable | undefined = this.dfsStack.pop();
 
             if (activeVariable === undefined) {
@@ -276,7 +295,7 @@ class StackTraverser implements VariableTracker {
                 this.dfsStack.push(activeVariable);
                 return true;
             }
-            // good to go
+            // good to go; move this line up and keep naming consistent
             let referenceNumber = activeVariable.variablesReference;
 
             this.visited.add(referenceNumber);
@@ -305,13 +324,15 @@ class StackTraverser implements VariableTracker {
         return false;
     }
 
-
     private getVariableContents(varRef: number) {
-        if (vscode.debug.activeDebugSession === undefined) {
+        if (!this.variableDataRequested.has(varRef)) {
+            this.variableDataRequested.add(varRef);
+            if (vscode.debug.activeDebugSession === undefined) {
                 // we're not debugging
                 throw new Error('woof');
+            }
+            vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: varRef });
         }
-        vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: varRef });
     }
 
     public addScope(s: Scope): void {
