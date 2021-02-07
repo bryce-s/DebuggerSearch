@@ -94,7 +94,7 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
             });
             
             // testing:
-            this.tracker.searchTerm('hey', 'locals', false, 2);
+            this.tracker.searchTerm('hey', 'locals', false, 3);
         }
 
         //vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: 3 });
@@ -133,9 +133,13 @@ class Scope {
 class Variable {
 
     public variablesReference: number = -1;
+    public depthFoundAt: number = 1;
 
-    constructor(variablesReferenceIn: number) {
+    constructor(variablesReferenceIn: number, priorDepthIn: number | undefined = undefined) {
         this.variablesReference = variablesReferenceIn;
+        if (priorDepthIn !== undefined) {
+            this.depthFoundAt += priorDepthIn;
+        }
     }
 
 }
@@ -191,8 +195,7 @@ class StackTraverser implements VariableTracker {
     private variableInfoMapping: Map<number, Array<VariableInfo>> = new Map<number, Array<VariableInfo>>();
 
     private dfsStack: Array<Variable> = new Array<Variable>();
-
-
+    private depthToSearch: number = 3;
 
     searchInProgress: boolean = false;
     term: string = '';
@@ -234,6 +237,7 @@ class StackTraverser implements VariableTracker {
     public searchTerm(t: string, scopeName?: string, regex?: boolean, depth?: number): any {
         this.searchInProgress = true;
         this.term = t;
+        this.depthToSearch = (depth === undefined) ? 3 : depth;
 
         if (scopeName === 'locals') {
 
@@ -252,7 +256,7 @@ class StackTraverser implements VariableTracker {
                 throw new Error('variable was undefined!');
             }
             this.dfsStack.push(variable);
-            let bailOut: boolean = this.traverseVariableTreeIterative(2, (s: string) => s === 'hey');
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (s: string) => s === 'hey');
             if (bailOut) {
                 return;
             }
@@ -263,7 +267,7 @@ class StackTraverser implements VariableTracker {
     }
 
     public resumeSearch() {
-        this.traverseVariableTreeIterative(2, (s: string) => s === 'hey');
+        this.traverseVariableTreeIterative(this.depthToSearch, (s: string) => s === 'hey');
     }
 
     // comp: do we want to regex? or just check if contains, etc.
@@ -276,7 +280,7 @@ class StackTraverser implements VariableTracker {
         }
     }
 
-    // there's two ways to enter this; the initial way , and a resume. Inital elt is preloaded
+    // there's two ways to enter this; the initial way , and a resume. Initial elt is preloaded
     // returns: should we bail out?
     private traverseVariableTreeIterative(depth: number, comp: Function): boolean {
 
@@ -288,32 +292,36 @@ class StackTraverser implements VariableTracker {
                 throw Error('what?');
             }
 
+            let referenceNumber = activeVariable.variablesReference;
+
             // throw and push back in stack
-            if (!this.variableInfoMapping.has(activeVariable.variablesReference)) {
+            if (!this.variableInfoMapping.has(referenceNumber)) {
                 // we need to populate this...
-                this.getVariableContents(activeVariable.variablesReference);
+                this.getVariableContents(referenceNumber);
                 this.dfsStack.push(activeVariable);
                 return true;
             }
-            // good to go; move this line up and keep naming consistent
-            let referenceNumber = activeVariable.variablesReference;
 
+            // good to go
             this.visited.add(referenceNumber);
 
-            let varInfo: VariableInfo[] | undefined = this.variableInfoMapping.get(referenceNumber);
-            if (varInfo === undefined) {
+            let varInfos: VariableInfo[] | undefined = this.variableInfoMapping.get(referenceNumber);
+
+            if (varInfos === undefined) {
                 throw new Error('should not be undefined');
             }
 
-            varInfo.forEach(info => {
-               if (info.variableReference !== 0 && !this.visited.has(info.variableReference)) {
-                    this.dfsStack.push(new Variable(info.variableReference));
-                    this.visited.add(info.variableReference);
-               }
-               if (comp(info.evaluateName) || comp(info.name)) {
-                    console.log('we found a result ^_^');
-               }
-            });
+            if (activeVariable.depthFoundAt + 1 < depth) {
+                varInfos.forEach(info => {
+                    if (info.variableReference !== 0 && !this.visited.has(info.variableReference)) {
+                         this.dfsStack.push(new Variable(info.variableReference, activeVariable?.depthFoundAt));
+                         this.visited.add(info.variableReference);
+                    }
+                    if (comp(info.evaluateName) || comp(info.name)) {
+                         console.log('we found a result ^_^');
+                    }
+                 });
+            }
 
         }
 
