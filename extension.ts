@@ -7,7 +7,13 @@ import { stringify } from 'querystring';
 import { Socket } from 'dgram';
 import  RequestConstants from './RequestConstants';
 import { setFlagsFromString } from 'v8';
+import { Console } from 'console';
 
+
+// todo:
+// some kind of testcase
+// implement logging so we can see what happens; we need observability
+// need a tree page, or something.. some kinda UI   
 
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
@@ -48,7 +54,6 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
             this.tracker.logRequest(message.seq, message.arguments.variablesReference);
         }
 
-
         // let requestForBottomVariable = {
         //     command: "variables",
         //     arguments: {
@@ -72,7 +77,7 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
             let variables = message.body.variables;
 
             this.tracker.addVariableData(variables.map(
-                (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName)
+                (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName, x.value)
                 ), message.request_seq);
 
             this.tracker.resumeSearch();
@@ -149,13 +154,15 @@ class VariableInfo {
     public variableReference: number = -1;
     public name: string = ''; // "01" (this is the 'real' name)
     public type: string = ''; // "str"
-    public evaluateName: string = ''; // "inputFiles[1]"
+    public evaluateName: string = ''; // "Image.PropertyName"
+    public value: any = undefined;
 
-    constructor(variableReferencesIn: number, nameIn: string, typeIn: string, evaluateNameIn: string) {
+    constructor(variableReferencesIn: number, nameIn: string, typeIn: string, evaluateNameIn: string, valueIn: any) {
         this.variableReference = variableReferencesIn;
         this.name = nameIn;
         this.type = typeIn;
         this.evaluateName = evaluateNameIn;
+        this.value = valueIn;
     }
 
 }
@@ -182,6 +189,21 @@ interface VariableTracker {
     searchInProgress: boolean;
 }
 
+class VariableSearchLogger {
+    private enabled: boolean = false;
+
+    public writeLog(content: any): void {
+        if (this.enabled) {
+            console.log(content);
+        }
+    }
+
+    constructor(enabled: boolean = false) {
+        this.enabled = enabled;
+    }
+}
+
+
 class StackTraverser implements VariableTracker {
 
     private scopes: Array<Scope> = new Array<Scope>();
@@ -196,6 +218,9 @@ class StackTraverser implements VariableTracker {
 
     private dfsStack: Array<Variable> = new Array<Variable>();
     private depthToSearch: number = 3;
+
+    // how to tell if extension is deployed?
+    private logger: VariableSearchLogger = new VariableSearchLogger( true  );
 
     searchInProgress: boolean = false;
     term: string = '';
@@ -227,6 +252,10 @@ class StackTraverser implements VariableTracker {
             throw new Error('no reference to map to from variable');
         }
         // check if it exists first?
+
+        this.logger.writeLog(`Storing the following for variablesReference: ${variableReference}`);
+        this.logger.writeLog(v);
+
         this.variableInfoMapping.set(variableReference, v);
     }
 
@@ -239,6 +268,8 @@ class StackTraverser implements VariableTracker {
         this.term = t;
         this.depthToSearch = (depth === undefined) ? 3 : depth;
 
+        this.logger.writeLog(`Searching term: ${t} at depth ${depth}.`);
+
         if (scopeName === 'locals') {
 
             if (this.scopes === undefined) {
@@ -250,11 +281,15 @@ class StackTraverser implements VariableTracker {
                 // error, not a valid scope
                 locals = this.scopes[0];
             }
+
+            this.logger.writeLog(`Searching in scope: ${locals}`);
+
             let variable = new Variable(locals.variablesReference);
             if (variable === undefined) {
                 // error
                 throw new Error('variable was undefined!');
             }
+
             this.dfsStack.push(variable);
             let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (s: string) => s === 'hey');
             if (bailOut) {
@@ -282,7 +317,7 @@ class StackTraverser implements VariableTracker {
 
     // there's two ways to enter this; the initial way , and a resume. Initial elt is preloaded
     // returns: should we bail out?
-    private traverseVariableTreeIterative(depth: number, comp: Function): boolean {
+    private traverseVariableTreeIterative(depth: number, checkString: Function): boolean {
 
         // gonna be kinda tricky, since we need to 'start and stop...'
         while (this.dfsStack.length > 0) {
@@ -311,19 +346,21 @@ class StackTraverser implements VariableTracker {
                 throw new Error('should not be undefined');
             }
 
-            if (activeVariable.depthFoundAt + 1 < depth) {
-                varInfos.forEach(info => {
-                    if (info.variableReference !== 0 && !this.visited.has(info.variableReference)) {
-                         this.dfsStack.push(new Variable(info.variableReference, activeVariable?.depthFoundAt));
-                         this.visited.add(info.variableReference);
-                    }
-                    if (comp(info.evaluateName) || comp(info.name)) {
-                         console.log('we found a result ^_^');
-                    }
-                 });
-            }
-
+            varInfos.forEach(info => {
+                if (activeVariable === undefined) {
+                    throw new Error("this can't be undefined");
+                }
+                if (info.variableReference !== 0 && !this.visited.has(info.variableReference)
+                    && (activeVariable.depthFoundAt + 1) <= depth) {
+                    this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt));
+                    this.visited.add(info.variableReference);
+                }
+                if (checkString(info.evaluateName) || checkString(info.name) || checkString(info.value)) {
+                    console.log('we found a result ^_^');
+                }
+            });
         }
+
 
         if (this.dfsStack.length === 0) {
             this.term = '';
@@ -339,6 +376,7 @@ class StackTraverser implements VariableTracker {
                 // we're not debugging
                 throw new Error('woof');
             }
+            this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`);
             vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: varRef });
         }
     }
