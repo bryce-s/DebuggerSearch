@@ -14,6 +14,7 @@ import { Console } from 'console';
 // some kind of testcase
 // implement logging so we can see what happens; we need observability
 // need a tree page, or something.. some kinda UI   
+// we sometimes concatenate before printing message, this might be slow.
 
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
@@ -146,7 +147,15 @@ class Variable {
             this.depthFoundAt += priorDepthIn;
         }
     }
+}
 
+class SearchResult {
+    public result: string = '';
+    public eval: string = '';
+    constructor(resultIn: string, evalIn: string) {
+        this.result = resultIn;
+        this.eval = evalIn;
+    }
 }
 
 class VariableInfo {
@@ -190,18 +199,23 @@ interface VariableTracker {
 }
 
 class VariableSearchLogger {
-    private enabled: boolean = false;
+    private _enabled: boolean = false;
 
     public writeLog(content: any): void {
-        if (this.enabled) {
+        if (this._enabled) {
             console.log(content);
         }
     }
 
+    public get enabled(): boolean {
+        return this.enabled;
+    }
+
     constructor(enabled: boolean = false) {
-        this.enabled = enabled;
+        this._enabled = enabled;
     }
 }
+
 
 
 class StackTraverser implements VariableTracker {
@@ -222,8 +236,19 @@ class StackTraverser implements VariableTracker {
     // how to tell if extension is deployed?
     private logger: VariableSearchLogger = new VariableSearchLogger( true  );
 
-    searchInProgress: boolean = false;
-    term: string = '';
+    private searchInProgress: boolean = false;
+    private term: string = '';
+    private searchWithRegex: boolean = false;
+
+    private results: Array<SearchResult> = new Array<SearchResult>();
+
+    private searchContains(s: string): boolean {
+        return s.includes(this.term);
+    }
+
+    private regexSearchContains(sWithRegex: string) {
+        return true;
+    }
 
     public addVariables(v: Array<Variable>, requestSeq: number) : void {
         let variableReference: number | undefined = this.openRequests.get(requestSeq);
@@ -267,6 +292,7 @@ class StackTraverser implements VariableTracker {
         this.searchInProgress = true;
         this.term = t;
         this.depthToSearch = (depth === undefined) ? 3 : depth;
+        this.searchWithRegex = (regex !== undefined ) ? regex : false;
 
         this.logger.writeLog(`Searching term: ${t} at depth ${depth}.`);
 
@@ -291,7 +317,7 @@ class StackTraverser implements VariableTracker {
             }
 
             this.dfsStack.push(variable);
-            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (s: string) => s === 'hey');
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.searchTerm);
             if (bailOut) {
                 return;
             }
@@ -299,10 +325,11 @@ class StackTraverser implements VariableTracker {
                 
         this.term = '';
         this.searchInProgress = false;
+        this.searchWithRegex = false;
     }
 
     public resumeSearch() {
-        this.traverseVariableTreeIterative(this.depthToSearch, (s: string) => s === 'hey');
+        this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.searchTerm);
     }
 
     // comp: do we want to regex? or just check if contains, etc.
@@ -357,6 +384,7 @@ class StackTraverser implements VariableTracker {
                 }
                 if (checkString(info.evaluateName) || checkString(info.name) || checkString(info.value)) {
                     console.log('we found a result ^_^');
+                    this.results.push(new SearchResult(info.value, info.evaluateName));
                 }
             });
         }
@@ -365,6 +393,7 @@ class StackTraverser implements VariableTracker {
         if (this.dfsStack.length === 0) {
             this.term = '';
             this.searchInProgress = false;
+            this.searchWithRegex = false;
         }
         return false;
     }
@@ -376,7 +405,7 @@ class StackTraverser implements VariableTracker {
                 // we're not debugging
                 throw new Error('woof');
             }
-            this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`);
+            (this.logger.enabled )? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : ()=>{};
             vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: varRef });
         }
     }
