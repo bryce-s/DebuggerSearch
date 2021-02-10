@@ -199,20 +199,16 @@ interface VariableTracker {
 }
 
 class VariableSearchLogger {
-    private _enabled: boolean = false;
+    public enabled: boolean = false;
 
     public writeLog(content: any): void {
-        if (this._enabled) {
+        if (this.enabled) {
             console.log(content);
         }
     }
 
-    public get enabled(): boolean {
-        return this.enabled;
-    }
-
     constructor(enabled: boolean = false) {
-        this._enabled = enabled;
+        this.enabled = enabled;
     }
 }
 
@@ -236,19 +232,19 @@ class StackTraverser implements VariableTracker {
     // how to tell if extension is deployed?
     private logger: VariableSearchLogger = new VariableSearchLogger( true  );
 
-    private searchInProgress: boolean = false;
+    searchInProgress: boolean = false;
     private term: string = '';
     private searchWithRegex: boolean = false;
 
     private results: Array<SearchResult> = new Array<SearchResult>();
 
-    private searchContains(s: string): boolean {
+    searchContains = (s: string): boolean => {
         return s.includes(this.term);
-    }
+    };
 
-    private regexSearchContains(sWithRegex: string) {
+    regexSearchContains = (sWithRegex: string) => {
         return true;
-    }
+    };
 
     public addVariables(v: Array<Variable>, requestSeq: number) : void {
         let variableReference: number | undefined = this.openRequests.get(requestSeq);
@@ -317,7 +313,7 @@ class StackTraverser implements VariableTracker {
             }
 
             this.dfsStack.push(variable);
-            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.searchTerm);
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.regexSearchContains);
             if (bailOut) {
                 return;
             }
@@ -329,7 +325,7 @@ class StackTraverser implements VariableTracker {
     }
 
     public resumeSearch() {
-        this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.searchTerm);
+        this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.regexSearchContains);
     }
 
     // comp: do we want to regex? or just check if contains, etc.
