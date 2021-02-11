@@ -34,7 +34,7 @@ class VariableSearchDebugAdapterTrackerFactory implements DebugAdapterTrackerFac
 
 class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
-    private readonly tracker: VariableTracker; 
+    private tracker: VariableTracker; 
 
     constructor() {
         this.tracker = new StackTraverser();
@@ -75,13 +75,18 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
         if (message.command === 'variables' && this.tracker.searchInProgress) {
             // need to actually save the data and associate it with our variable being requested.
-            let variables = message.body.variables;
-
-            this.tracker.addVariableData(variables.map(
-                (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName, x.value)
-                ), message.request_seq);
-
-            this.tracker.resumeSearch();
+            if (message.success) {
+                let variables = message.body.variables;
+            
+                this.tracker.addVariableData(variables.map(
+                    (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName, x.value)
+                    ), message.request_seq);
+    
+                this.tracker.resumeSearch();
+            } else {
+                console.log(`requesting variables failed`);
+                console.log(message);
+            }
         }
         else if (message.command === 'variables') {
             let variables = message.body.variables;
@@ -93,7 +98,11 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
             this.tracker.addVariables(trackedVariables, message.request_seq);
         }
         if (message.command === 'scopes') {
-            //this.tracker.addScope();
+            
+            // i think the only time this is called is when execution is paused?
+            // this should be the case, but we will want to defer doing work until a search is actually run.
+            this.tracker = new StackTraverser();
+
             console.log('adding a scope');
             message.body.scopes.forEach((s: any) => {
                 this.tracker.addScope(new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference));
@@ -238,12 +247,12 @@ class StackTraverser implements VariableTracker {
 
     private results: Array<SearchResult> = new Array<SearchResult>();
 
-    searchContains = (s: string): boolean => {
-        return s.includes(this.term);
+    searchContains = (s: string, term: string): boolean => {
+        return s.includes(term);
     };
 
-    regexSearchContains = (sWithRegex: string) => {
-        return true;
+    regexSearchContains = (sWithRegex: string, term: string) => {
+        return false;
     };
 
     public addVariables(v: Array<Variable>, requestSeq: number) : void {
@@ -313,7 +322,7 @@ class StackTraverser implements VariableTracker {
             }
 
             this.dfsStack.push(variable);
-            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.regexSearchContains);
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains: this.searchContains);
             if (bailOut) {
                 return;
             }
@@ -325,7 +334,7 @@ class StackTraverser implements VariableTracker {
     }
 
     public resumeSearch() {
-        this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.searchContains : this.regexSearchContains);
+        this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains: this.searchContains);
     }
 
     // comp: do we want to regex? or just check if contains, etc.
@@ -378,7 +387,8 @@ class StackTraverser implements VariableTracker {
                     this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt));
                     this.visited.add(info.variableReference);
                 }
-                if (checkString(info.evaluateName) || checkString(info.name) || checkString(info.value)) {
+                if (checkString(info.evaluateName || '', this.term) || checkString(info.name || '', this.term) 
+                    || checkString(info.value || '', this.term)) {
                     console.log('we found a result ^_^');
                     this.results.push(new SearchResult(info.value, info.evaluateName));
                 }
