@@ -15,10 +15,36 @@ import { Console } from 'console';
 // implement logging so we can see what happens; we need observability
 // need a tree page, or something.. some kinda UI   
 // we sometimes concatenate before printing message, this might be slow.
+// need to add a way to exclude non-user code.. is this even possible?
+// should only allocate on use.
+// commands to disable and enable
 
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
+    
+    let x = vscode.commands.registerCommand("variableSearch.search", () => {
+        if (vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused) {
+            vscode.window.showInputBox({prompt: "Search for?"}).then(
+                (v: string | undefined)=>{
+                    // success
+                    console.log(`we got v: ${v}`);
+                    },
+                    (v: string | undefined) => {
+                        //failure?
+                    }
+                    
+                );
+        } else {
+            vscode.window.showWarningMessage( 
+                (vscode.debug.activeDebugSession === undefined) 
+                ? "VariableSearch: no active debug session." : "VariableSearch: the debugger is not paused." 
+                );
+        }
+    
+    });
+    context.subscriptions.push(x);
+
 }
 
 
@@ -35,11 +61,16 @@ class VariableSearchDebugAdapterTrackerFactory implements DebugAdapterTrackerFac
 class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
     private tracker: VariableTracker; 
+    public static debuggerPaused: boolean = false;
 
     constructor() {
         this.tracker = new StackTraverser();
-    }
 
+        // re-assign to false on debug adapter start
+        VariableSearchDebugAdapterTracker.debuggerPaused = false;
+        
+    }
+    
     onWillReceiveMessage(message: any) {
         // sending a message to the debug adapter
         //this.tracker.logRequest()
@@ -72,6 +103,19 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
     onDidSendMessage(message: any) {
         console.log("Received message from debug adapter:\n", message);
+        
+        // https://microsoft.github.io/debug-adapter-protocol/specification
+        if (message.type === 'event') {
+            if (message.event === 'stopped') {
+                VariableSearchDebugAdapterTracker.debuggerPaused = true;
+            }
+            if (message.event === 'continued') {
+                VariableSearchDebugAdapterTracker.debuggerPaused = false;
+            }
+            if (message.event === 'exited' || message.event === 'terminated') {
+                VariableSearchDebugAdapterTracker.debuggerPaused = false;
+            }
+        }
 
         if (message.command === 'variables' && this.tracker.searchInProgress) {
             // need to actually save the data and associate it with our variable being requested.
@@ -205,6 +249,7 @@ interface VariableTracker {
     resumeSearch(): void;
 
     searchInProgress: boolean;
+
 }
 
 class VariableSearchLogger {
@@ -241,11 +286,13 @@ class StackTraverser implements VariableTracker {
     // how to tell if extension is deployed?
     private logger: VariableSearchLogger = new VariableSearchLogger( true  );
 
-    searchInProgress: boolean = false;
     private term: string = '';
     private searchWithRegex: boolean = false;
 
     private results: Array<SearchResult> = new Array<SearchResult>();
+
+    // public VariableTracker properties
+    searchInProgress: boolean = false;
 
     searchContains = (s: string, term: string): boolean => {
         return s.includes(term);
@@ -281,12 +328,13 @@ class StackTraverser implements VariableTracker {
             // error
             throw new Error('no reference to map to from variable');
         }
-        // check if it exists first?
 
-        this.logger.writeLog(`Storing the following for variablesReference: ${variableReference}`);
-        this.logger.writeLog(v);
+        if (!this.variableInfoMapping.has(variableReference)) {
+            this.logger.writeLog(`Storing the following for variablesReference: ${variableReference}`);
+            this.logger.writeLog(v);
+            this.variableInfoMapping.set(variableReference, v);
+        }
 
-        this.variableInfoMapping.set(variableReference, v);
     }
 
     public logRequest(seq: number, variableReference: number) {
