@@ -8,6 +8,8 @@ import { Socket } from 'dgram';
 import  RequestConstants from './RequestConstants';
 import { setFlagsFromString } from 'v8';
 import { Console } from 'console';
+import { Z_ASCII } from 'zlib';
+import { parse } from 'path';
 
 
 // todo:
@@ -19,33 +21,138 @@ import { Console } from 'console';
 // should only allocate on use.
 // commands to disable and enable
 
+// next: gotta bind our threads to frames, 
+// then frames to scopes, then scopes to variables
+
+function debuggerPaused(): boolean {
+   return vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused; 
+}
+
+function debuggerRunningOrExitedError(): string {
+   return (vscode.debug.activeDebugSession === undefined) 
+   ? "VariableSearch: no active debug session." : "VariableSearch: the debugger is not paused."; 
+}
+
+
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
+    // lets us dispose of the listener when it's done
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
     
-    let x = vscode.commands.registerCommand("variableSearch.search", () => {
-        if (vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused) {
-            vscode.window.showInputBox({prompt: "Search for?"}).then(
-                (v: string | undefined)=>{
-                    // success
-                    console.log(`we got v: ${v}`);
-                    },
-                    (v: string | undefined) => {
-                        //failure?
-                    }
-                    
-                );
-        } else {
-            vscode.window.showWarningMessage( 
-                (vscode.debug.activeDebugSession === undefined) 
-                ? "VariableSearch: no active debug session." : "VariableSearch: the debugger is not paused." 
-                );
-        }
-    
-    });
+    // might wanna make the callback async here, then we can await functions inside it
+    let x = vscode.commands.registerCommand("variableSearch.search", SearchCommands.searchCommand);
     context.subscriptions.push(x);
 
 }
+namespace SearchCommands {
+
+    export function searchCommand(): void {
+        if (debuggerPaused()) {
+            vscode.window.showInputBox({prompt: "Search for?"}).then(
+                (term: string | undefined)=>{
+                    // success
+                    if (term === undefined) {
+                        return;
+                    }
+                    if (debuggerPaused()) {
+                        let currentThreads: Array<any> = VariableSearchDebugAdapterTracker.threadTracker.threads || new Array<any>();
+                        let options = currentThreads.map((threadInfo) => {
+                            return {
+                                label: `${threadInfo.id}: ${threadInfo.name}`,
+                                description: ``,
+                                command: `${threadInfo.id}`,
+                            };
+                        });
+                        vscode.window.showQuickPick(options, {canPickMany: false}).then((option: any) => {
+                            if (!option) {
+                                return;
+                            }
+                            if (!option.length) {
+                                option = new Array<any>(option);
+                            }
+                            let targetThread = option.map((opt: any) => parseInt(opt.command));
+                            requestFrames(targetThread, term);
+                        });
+                    }
+    
+                    },
+                    (v: string | undefined) => {
+                    // failure?
+                    }
+                );
+        } else {
+            vscode.window.showWarningMessage( 
+                 debuggerRunningOrExitedError() 
+                );
+        }
+    };
+
+    function requestFrames(threads: Array<number>, term: string) {
+        // this should only have one at the moment; could do multiple but would need to bind them 
+        // back, since origin is not included in promise resolution.
+        threads.forEach(threadId => {
+            vscode.debug.activeDebugSession?.customRequest("stackTrace", {
+                threadId: threadId,
+                startFrame: 0,
+                levels: 20,
+            }).then((stackFrames: any) => {
+                if (!stackFrames) {
+                    return;
+                }
+                pickFrame(stackFrames.stackFrames, term);
+            });
+        });
+    }
+
+    function pickFrame(stackFrames: Array<any>, term: string) {
+        let i: number = 0;
+        let options = stackFrames.map((frame: any) => {
+            let res = {
+                label: `Stack Frame ${i.toString()}: ${frame.name}`,
+                description: ``,
+                command: frame.id,
+            };
+            i++;
+            return res;
+        });
+        vscode.window.showQuickPick(options).then((option: any) => {
+            if (!option) {
+                return;
+            }
+            if (!option.length) {
+                option = new Array<any>(option);
+            }
+            let frameToRequest = option.map((opt: any) => opt.command);
+            requestScopes(frameToRequest, term);
+        });
+    }
+
+    function requestScopes(frameToRequest: Array<any>, term: string) {
+        frameToRequest.forEach((frame: any) => {
+            vscode.debug.activeDebugSession?.customRequest("scopes", {
+                frameId: frame,
+            }).then((message) => {
+                // is array with .name, .variablesReference
+                if (!message) {
+                    return;
+                }
+                let scopes = message.scopes;
+
+                VariableSearchDebugAdapterTracker.generateNewTracker();
+                scopes.forEach((s: any) => {
+                    VariableSearchDebugAdapterTracker.trackerReference?.addScope(new Scope(s.expensive, s.name, 
+                        s.presentationHint, s.variablesReference)
+                     );
+                });
+
+                VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(term, undefined, undefined, 3);
+
+            });
+        });
+    }
+
+}
+
 
 
 
@@ -60,15 +167,25 @@ class VariableSearchDebugAdapterTrackerFactory implements DebugAdapterTrackerFac
 
 class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
-    private tracker: VariableTracker; 
+    //private tracker!: VariableTracker; 
+
+    public static threadTracker: ThreadTracker;
+    public static stackFrameTracker: StackFrameTracker; 
+
+    public static trackerReference: VariableTracker | undefined = undefined;
     public static debuggerPaused: boolean = false;
 
     constructor() {
-        this.tracker = new StackTraverser();
 
-        // re-assign to false on debug adapter start
-        VariableSearchDebugAdapterTracker.debuggerPaused = false;
+        VariableSearchDebugAdapterTracker.generateNewTracker();
         
+        // reassign to false on debug adapter start:
+        VariableSearchDebugAdapterTracker.debuggerPaused = false;
+        VariableSearchDebugAdapterTracker.threadTracker = new ThreadTracker();
+    }
+
+    public static generateNewTracker(): void {
+        VariableSearchDebugAdapterTracker.trackerReference = new StackTraverser();
     }
     
     onWillReceiveMessage(message: any) {
@@ -76,14 +193,22 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
         //this.tracker.logRequest()
 
         if (message.command === 'bryceWillsIt' ) {
-            this.tracker.logRequest(message.seq, message.arguments.variablesReference);
+            VariableSearchDebugAdapterTracker.trackerReference!.logRequest(message.seq, message.arguments.variablesReference);
         }
-
         if (message.command === 'scopes') {
             console.log('scopes Online');
         }
         if (message.command === 'variables') {
-            this.tracker.logRequest(message.seq, message.arguments.variablesReference);
+            VariableSearchDebugAdapterTracker.trackerReference!.logRequest(message.seq, message.arguments.variablesReference);
+        }
+
+        if (message.command === 'stackTrace') {
+            console.log('requesting stackTrace');
+            console.log(message.body);
+        }
+
+        if (message.command === 'threads') {
+            console.log('requesting threads');
         }
 
         // let requestForBottomVariable = {
@@ -106,58 +231,102 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
         
         // https://microsoft.github.io/debug-adapter-protocol/specification
         if (message.type === 'event') {
-            if (message.event === 'stopped') {
-                VariableSearchDebugAdapterTracker.debuggerPaused = true;
-            }
-            if (message.event === 'continued') {
-                VariableSearchDebugAdapterTracker.debuggerPaused = false;
-            }
-            if (message.event === 'exited' || message.event === 'terminated') {
-                VariableSearchDebugAdapterTracker.debuggerPaused = false;
-            }
+            this.handleEventRecv(message);
         }
 
-        if (message.command === 'variables' && this.tracker.searchInProgress) {
+        if (message.command === 'variables' && VariableSearchDebugAdapterTracker.trackerReference!.searchInProgress) {
             // need to actually save the data and associate it with our variable being requested.
-            if (message.success) {
-                let variables = message.body.variables;
-            
-                this.tracker.addVariableData(variables.map(
-                    (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName, x.value)
-                    ), message.request_seq);
-    
-                this.tracker.resumeSearch();
-            } else {
-                console.log(`requesting variables failed`);
-                console.log(message);
-            }
+            this.handleVariablesUnderSearchRecv(message);
         }
         else if (message.command === 'variables') {
-            let variables = message.body.variables;
-
-            let trackedVariables: Array<Variable> = new Array<Variable>();
-            variables.forEach((variable: any) =>  trackedVariables.push(new Variable(variable.variablesReference))); 
-            trackedVariables = trackedVariables.filter((variable) => variable.variablesReference !== 0);
-
-            this.tracker.addVariables(trackedVariables, message.request_seq);
+            this.handleVariablesRecv(message);
         }
         if (message.command === 'scopes') {
-            
+            this.handleScopesRecv(message);
+        }
+        if (message.command === 'stackTrace') {
+            this.handleStackTraceRecv(message);
+        }
+        if (message.command === 'threads') {
+            this.handleThreadsRecv(message);
+        }
+    }
+
+    handleEventRecv(message: any): void {
+        if (message.event === 'stopped') {
+            VariableSearchDebugAdapterTracker.debuggerPaused = true;
+        }
+        if (message.event === 'continued') {
+            VariableSearchDebugAdapterTracker.debuggerPaused = false;
+            VariableSearchDebugAdapterTracker.threadTracker.clearThreads();
+        }
+        if (message.event === 'exited' || message.event === 'terminated') {
+            VariableSearchDebugAdapterTracker.debuggerPaused = false;
+            VariableSearchDebugAdapterTracker.threadTracker.clearThreads();
+        }
+    }
+
+    handleVariablesUnderSearchRecv(message: any): void {
+        if (message.success) {
+            let variables = message.body.variables;
+        
+            VariableSearchDebugAdapterTracker.trackerReference!.addVariableData(variables.map(
+                (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName, x.value)
+                ), message.request_seq);
+
+            VariableSearchDebugAdapterTracker.trackerReference!.resumeSearch();
+        } else {
+            console.log(`requesting variables failed`);
+            console.log(message);
+        }
+    }
+
+    handleVariablesRecv(message: any): void {
+        let variables = message.body.variables;
+
+        let trackedVariables: Array<Variable> = new Array<Variable>();
+        variables.forEach((variable: any) =>  trackedVariables.push(new Variable(variable.variablesReference))); 
+        trackedVariables = trackedVariables.filter((variable) => variable.variablesReference !== 0);
+
+        VariableSearchDebugAdapterTracker.trackerReference!.addVariables(trackedVariables, message.request_seq);
+    }
+
+    handleScopesRecv(message: any): void {
             // i think the only time this is called is when execution is paused?
             // this should be the case, but we will want to defer doing work until a search is actually run.
-            this.tracker = new StackTraverser();
+            VariableSearchDebugAdapterTracker.generateNewTracker();
 
-            console.log('adding a scope');
             message.body.scopes.forEach((s: any) => {
-                this.tracker.addScope(new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference));
+                VariableSearchDebugAdapterTracker.trackerReference!.addScope(new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference));
             });
-            
-            // testing:
-            this.tracker.searchTerm('hey', 'locals', false, 3);
-        }
 
-        //vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: 3 });
     }
+
+    handleStackTraceRecv(message: any) {
+            if (message.success) {
+                if (message.body.stackFrames.length === message.body.totalFrames) {
+                    // this is from all threads.
+                    
+                }
+            }
+            console.log(`requested: ${message.body}`);
+    }
+
+    handleThreadsRecv(message: any): void {
+        if (message.success) {
+            VariableSearchDebugAdapterTracker.threadTracker.addThreads(
+                message.body.threads.map((thread: any) => {
+                    return {
+                        id: thread.id,
+                        name: thread.name,
+                    };
+                })
+            );
+        } else {
+            console.log(`error getting threads`);
+        }
+    }
+
 
     onError(error: Error) {
         console.log("Error in communication with debug adapter:\n", error);
@@ -172,6 +341,31 @@ class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
     }
 }
 
+class StackFrameTracker {
+    private stackFrames: Array<any> | undefined;
+
+    public addFrames(frames: Array<any>) {
+        this.stackFrames = frames;
+    }
+
+    public clearFrames(): void {
+        this.stackFrames = undefined;
+    }
+
+}
+
+class ThreadTracker {
+    public threads: Array<any> | undefined; 
+
+    // add paused threads to tracker
+    public addThreads(threadIds: Array<any>) {
+        this.threads = threadIds;
+    }
+
+    public clearThreads(): void {
+        this.threads = undefined;
+    }
+}
 
 class Scope {
 
@@ -243,8 +437,10 @@ interface VariableTracker {
     // search for a term using the tree
     searchTerm(t: string, scopeName?: string, regex?: boolean, depth?: number): any;
     
-    // should serve as root nodes
+    // should serve as root nodes for a search..
     addScope(s: Scope): void;
+
+
 
     resumeSearch(): void;
 
@@ -314,11 +510,11 @@ class StackTraverser implements VariableTracker {
         let childNodes: Variable[] | undefined = this.variableMapping.get(variableReference);
         childNodes = childNodes?.concat(v);
         this.variableMapping.set(variableReference, 
-                                (childNodes === undefined) ? new Array<Variable>().concat(v) : childNodes);
+            (childNodes === undefined) ? new Array<Variable>().concat(v) : childNodes);
 
         childNodes?.forEach(child => this.activeVariablesReferences.add(child.variablesReference));
     }
-    
+
     public addVariableData(v: Array<VariableInfo>, requestSeq: number): void {
         // going to need to do something like open requests, from above.
         let variableReference: number | undefined = this.openRequests.get(requestSeq);
@@ -341,41 +537,50 @@ class StackTraverser implements VariableTracker {
         this.openRequests.set(seq, variableReference);
     }
 
-    public searchTerm(t: string, scopeName?: string, regex?: boolean, depth?: number): any {
+    public searchTerm(t: string, scopeId?: string, regex?: boolean, depth?: number): any {
         this.searchInProgress = true;
         this.term = t;
         this.depthToSearch = (depth === undefined) ? 3 : depth;
-        this.searchWithRegex = (regex !== undefined ) ? regex : false;
+        this.searchWithRegex = (regex !== undefined) ? regex : false;
 
         this.logger.writeLog(`Searching term: ${t} at depth ${depth}.`);
 
-        if (scopeName === 'locals') {
 
-            if (this.scopes === undefined) {
-                throw new Error("we need to ensure scopes are populated by this point");
+        if (this.scopes === undefined) {
+            throw new Error("we need to ensure scopes are populated by this point");
+        }
+
+        if (scopeId === undefined) {
+            let scopes: Array<Scope> = this.scopes; 
+            let startingVariables = scopes.map((s) => new Variable(s.variablesReference));
+            this.dfsStack.push(...startingVariables);
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains : this.searchContains);
+            if (bailOut) {
+                return;
             }
-
-            let locals: Scope | undefined = this.scopes.find((scope) => scope.name === 'Locals');
-            if (locals === undefined) {
+        } else {
+            let targetScope: Scope | undefined = this.scopes.find((scope) => scope.variablesReference === parseInt(scopeId));
+            if (targetScope === undefined) {
                 // error, not a valid scope
-                locals = this.scopes[0];
+                targetScope = this.scopes[0];
             }
-
-            this.logger.writeLog(`Searching in scope: ${locals}`);
-
-            let variable = new Variable(locals.variablesReference);
+    
+            this.logger.writeLog(`Searching in scope: ${targetScope}`);
+    
+            let variable = new Variable(targetScope.variablesReference);
             if (variable === undefined) {
                 // error
                 throw new Error('variable was undefined!');
             }
 
             this.dfsStack.push(variable);
-            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains: this.searchContains);
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains : this.searchContains);
             if (bailOut) {
                 return;
-            }
+            }     
         }
-                
+        
+
         this.term = '';
         this.searchInProgress = false;
         this.searchWithRegex = false;
@@ -460,6 +665,7 @@ class StackTraverser implements VariableTracker {
                 throw new Error('woof');
             }
             (this.logger.enabled )? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : ()=>{};
+            // can't just resolve the promise; no way to bind it back:
             vscode.debug.activeDebugSession?.customRequest("variables", { variablesReference: varRef });
         }
     }
