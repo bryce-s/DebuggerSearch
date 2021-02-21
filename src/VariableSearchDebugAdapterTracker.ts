@@ -1,6 +1,6 @@
 import { DebugAdapterTracker, DebugAdapterTrackerFactory,  } from 'vscode';
 import Constants from './Constants';
-import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope } from './DebuggerObjectRepresentations';
+import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope, VariableSearchLogger } from './DebuggerObjectRepresentations';
 import VariableTracker from './VariableTracker';
 import ScopeTraverser from './ScopeTraverser';
 
@@ -10,6 +10,26 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     //private tracker!: VariableTracker; 
 
     public static threadTracker: ThreadTracker;
+
+    // selected threads for search
+    private static _selectedThreads: Array<number> | undefined = undefined;
+
+    private static allocateSelectedThreadsIfNeeded(): void {
+        if (VariableSearchDebugAdapterTracker._selectedThreads === undefined) {
+            VariableSearchDebugAdapterTracker._selectedThreads = new Array<number>();
+        }
+    }
+
+    public static get selectedThreads(): Array<number> {
+        this.allocateSelectedThreadsIfNeeded();
+        return VariableSearchDebugAdapterTracker._selectedThreads!;
+    }
+    public static set selectedThreads(threads: Array<number>) {
+        this.allocateSelectedThreadsIfNeeded();
+        VariableSearchDebugAdapterTracker._selectedThreads = VariableSearchDebugAdapterTracker._selectedThreads?.concat(threads);
+    }
+
+
     public static stackFrameTracker: StackFrameTracker; 
 
     public static trackerReference: VariableTracker | undefined = undefined;
@@ -92,13 +112,16 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         if (message.event === Constants.stopped) {
             VariableSearchDebugAdapterTracker.debuggerPaused = true;
         }
+        // works for steps
         if (message.event === Constants.continued) {
             VariableSearchDebugAdapterTracker.debuggerPaused = false;
             VariableSearchDebugAdapterTracker.threadTracker.clearThreads();
+            VariableSearchDebugAdapterTracker._selectedThreads = undefined;
         }
         if (message.event === Constants.exited || message.event === Constants.terminated) {
             VariableSearchDebugAdapterTracker.debuggerPaused = false;
             VariableSearchDebugAdapterTracker.threadTracker.clearThreads();
+            VariableSearchDebugAdapterTracker._selectedThreads = undefined;
         }
     }
 

@@ -15,7 +15,6 @@ import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTrack
 import { SearchCommands } from './SearchCommands';
 
 
-// todo:
 // some kind of testcase
 // implement logging so we can see what happens; we need observability
 // need a tree page, or something.. some kinda UI   
@@ -24,11 +23,6 @@ import { SearchCommands } from './SearchCommands';
 // should only allocate on use./
 // commands to disable and enable
 
-// next: gotta bind our threads to frames, 
-// then frames to scopes, then scopes to variables
-
-
-
 
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
@@ -36,9 +30,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
     
     // might wanna make the callback async here, then we can await functions inside it
-    let x = vscode.commands.registerCommand("variableSearch.search", SearchCommands.searchCommand);
-    context.subscriptions.push(x);
-    
+    context.subscriptions.push(
+		vscode.commands.registerCommand("variableSearch.search", SearchCommands.searchCommand)
+	);
+	context.subscriptions.push(
+		vscode.commands.registerCommand("variableSearch.setThread", SearchCommands.setThread)
+	);
 
 }
 

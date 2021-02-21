@@ -1,22 +1,83 @@
 import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
 import * as vscode from 'vscode';
 import Constants from './Constants';
-import { Scope } from './DebuggerObjectRepresentations';
+import { Scope, ThreadTracker } from './DebuggerObjectRepresentations';
 
 export namespace SearchCommands {
 
-    function debuggerPaused(): boolean {
-        return vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused;
+
+    export function debuggerPaused(): boolean {
+        if (vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused) {
+            return true;
+        }
+        debuggerRunningOrExitedError();
+        return false;
     }
 
-    function debuggerRunningOrExitedError(): string {
+    export function debuggerRunningOrExitedError(): string {
         return (vscode.debug.activeDebugSession === undefined)
             ? "VariableSearch: no active debug session." : "VariableSearch: the debugger is not paused.";
     }
 
+    export async function setThread(): Promise<void> {
+        if (debuggerPaused()) {
+            let currentThreads: Array<any> = VariableSearchDebugAdapterTracker.threadTracker.threads || new Array<any>();
+            let items: Array<any> = currentThreads.map((threadInfo) => {
+                return {
+                    label: `${threadInfo.id}: ${threadInfo.name}`,
+                    description: ``,
+                    command: `${threadInfo.id}`,
+                };
+            });
+            let threadChoice = await vscode.window.showQuickPick(items, { placeHolder: "Choose a thread..." });
+            if (debuggerPaused() && threadChoice !== undefined) {
+                console.log(threadChoice);
+                let targetThread: number = parseInt(threadChoice.command);
+                VariableSearchDebugAdapterTracker.selectedThreads = new Array<number>(targetThread);
+            }
+        }
+    }
+
+    export async function setFrame(): Promise<void> {
+        if (debuggerPaused()) {
+            let selectedThreads: Array<number> = VariableSearchDebugAdapterTracker.selectedThreads;
+            if (selectedThreads.length < 1) {
+                vscode.window.showErrorMessage("A thread must be selected first.");
+                return;
+            }
+            selectedThreads.forEach(async (threadId: any) => {
+                let frames = await vscode.debug.activeDebugSession?.customRequest(Constants.stackTrace, {
+                    threadId: threadId,
+                    startFrame: 0,
+                    levels: 20, //todo: get this from a setting, or something.
+                });
+                if (!frames) {
+                    vscode.window.showErrorMessage("No stack frames found.");
+                    return;
+                }
+                let i: number = 0;
+                let items = frames.map((frame: any) => {
+                    let res = {
+                        label: `Stack Frame ${i.toString()}: ${frame.name}${(i === 0) ? " (top) " : ""}`,
+                        description: ``,
+                        command: frame.id,
+                    };
+                    i++;
+                    return res;
+                });
+                let frameChoice = await vscode.window.showQuickPick(items, { placeHolder: "Choose a stack frame..." });
+                if (debuggerPaused() && frameChoice !== undefined) {
+
+                }
+            });
+
+        }
+    }
+
+
     export function searchCommand(): void {
         if (debuggerPaused()) {
-            vscode.window.showInputBox({ prompt: "Search for?" }).then(
+            vscode.window.showInputBox({ prompt: "Search for?", }).then(
                 (term: string | undefined) => {
                     // success
                     if (term === undefined) {

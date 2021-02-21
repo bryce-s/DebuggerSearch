@@ -24,6 +24,11 @@
 				"command": "variableSearch.search",
 				"category": "VariableSearch",
 				"title": "Search Variables"
+			},
+			{
+				"command": "variableSearch.setThread",
+				"category": "VariableSearch",
+				"title": "Set Target Thread"
 			}
 		]
 	},
