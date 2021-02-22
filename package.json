@@ -29,6 +29,11 @@
 				"command": "variableSearch.setThread",
 				"category": "VariableSearch",
 				"title": "Set Target Thread"
+			},
+			{
+				"command": "variableSearch.setFrame",
+				"category": "VariableSearch",
+				"title": "Set Target Stack Frame"
 			}
 		]
 	},

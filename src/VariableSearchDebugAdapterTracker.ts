@@ -11,7 +11,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
 
     public static threadTracker: ThreadTracker;
 
-    // selected threads for search
+    //#region selected threads for search
     private static _selectedThreads: Array<number> | undefined = undefined;
 
     private static allocateSelectedThreadsIfNeeded(): void {
@@ -28,9 +28,27 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         this.allocateSelectedThreadsIfNeeded();
         VariableSearchDebugAdapterTracker._selectedThreads = VariableSearchDebugAdapterTracker._selectedThreads?.concat(threads);
     }
+    //#endregion
 
 
-    public static stackFrameTracker: StackFrameTracker; 
+    //#region selected frames for search
+    private static _selectedFrames: Array<number> | undefined = undefined;
+
+    private static allocateSelectedFramesIfNeeded(): void {
+        if (VariableSearchDebugAdapterTracker._selectedFrames === undefined) {
+            VariableSearchDebugAdapterTracker._selectedFrames = new Array<number>();
+        }
+    }
+
+    public static get selectedFrames(): Array<number> {
+        this.allocateSelectedFramesIfNeeded();
+        return VariableSearchDebugAdapterTracker._selectedFrames!;
+    }
+    public static set selectedFrames(threads: Array<number>) {
+        this.allocateSelectedFramesIfNeeded();
+        VariableSearchDebugAdapterTracker._selectedFrames = VariableSearchDebugAdapterTracker._selectedFrames?.concat(threads);
+    }
+    //#endregion
 
     public static trackerReference: VariableTracker | undefined = undefined;
     public static debuggerPaused: boolean = false;
@@ -38,7 +56,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     constructor() {
 
         VariableSearchDebugAdapterTracker.generateNewTracker();
-        
+
         // reassign to false on debug adapter start:
         VariableSearchDebugAdapterTracker.debuggerPaused = false;
         VariableSearchDebugAdapterTracker.threadTracker = new ThreadTracker();

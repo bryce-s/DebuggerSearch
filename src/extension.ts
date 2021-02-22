@@ -36,6 +36,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand("variableSearch.setThread", SearchCommands.setThread)
 	);
+    context.subscriptions.push(
+        vscode.commands.registerCommand("variableSearch.setFrame", SearchCommands.setFrame)
+    );
 
 }
 

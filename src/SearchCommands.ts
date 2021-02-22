@@ -19,7 +19,7 @@ export namespace SearchCommands {
             ? "VariableSearch: no active debug session." : "VariableSearch: the debugger is not paused.";
     }
 
-    export async function setThread(): Promise<void> {
+    export async function setThread(message: string = "Choose a thread..."): Promise<void> {
         if (debuggerPaused()) {
             let currentThreads: Array<any> = VariableSearchDebugAdapterTracker.threadTracker.threads || new Array<any>();
             let items: Array<any> = currentThreads.map((threadInfo) => {
@@ -29,21 +29,21 @@ export namespace SearchCommands {
                     command: `${threadInfo.id}`,
                 };
             });
-            let threadChoice = await vscode.window.showQuickPick(items, { placeHolder: "Choose a thread..." });
+            let threadChoice = await vscode.window.showQuickPick(items, { placeHolder: message });
             if (debuggerPaused() && threadChoice !== undefined) {
-                console.log(threadChoice);
                 let targetThread: number = parseInt(threadChoice.command);
-                VariableSearchDebugAdapterTracker.selectedThreads = new Array<number>(targetThread);
+                VariableSearchDebugAdapterTracker.selectedThreads.push(targetThread); 
             }
         }
     }
 
-    export async function setFrame(): Promise<void> {
+    export async function setFrame(message: string = "Choose a stack frame..."): Promise<void> {
         if (debuggerPaused()) {
             let selectedThreads: Array<number> = VariableSearchDebugAdapterTracker.selectedThreads;
             if (selectedThreads.length < 1) {
                 vscode.window.showErrorMessage("A thread must be selected first.");
-                return;
+                await setThread("First, choose a thread...");
+                selectedThreads = VariableSearchDebugAdapterTracker.selectedThreads;
             }
             selectedThreads.forEach(async (threadId: any) => {
                 let frames = await vscode.debug.activeDebugSession?.customRequest(Constants.stackTrace, {
@@ -55,6 +55,7 @@ export namespace SearchCommands {
                     vscode.window.showErrorMessage("No stack frames found.");
                     return;
                 }
+                frames = frames.stackFrames;
                 let i: number = 0;
                 let items = frames.map((frame: any) => {
                     let res = {
@@ -65,14 +66,36 @@ export namespace SearchCommands {
                     i++;
                     return res;
                 });
-                let frameChoice = await vscode.window.showQuickPick(items, { placeHolder: "Choose a stack frame..." });
+                let frameChoice: any = await vscode.window.showQuickPick(items, { placeHolder: message});
                 if (debuggerPaused() && frameChoice !== undefined) {
-
+                    VariableSearchDebugAdapterTracker.selectedFrames.push(frameChoice.command);
                 }
             });
-
         }
-    }
+     }
+
+     export async function searchForTerm(): Promise<void> {
+         if (debuggerPaused()) {
+             if (!VariableSearchDebugAdapterTracker.selectedThreads.length) {
+                 await setThread("Before searching, select a thread...");
+             }
+            if (!VariableSearchDebugAdapterTracker.selectedFrames.length) {
+                await setFrame("Before searching, select a stack frame...");
+            }
+            let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
+            frameTargets.forEach(async (frame: number) => {
+                let scopes = await vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameid: frame });
+                VariableSearchDebugAdapterTracker.generateNewTracker();
+                scopes.forEach(async (s: any) => {
+                    VariableSearchDebugAdapterTracker.trackerReference?.addScope(new Scope(s.expensive, s.name,
+                        s.presentationHint, s.variablesReference));
+                });
+                //VariableSearchDebugAdapterTracker.trackerReference?.searchTerm()
+            });
+
+         }
+     }
+
 
 
     export function searchCommand(): void {
@@ -173,9 +196,7 @@ export namespace SearchCommands {
                         s.presentationHint, s.variablesReference)
                     );
                 });
-
                 VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(term, undefined, undefined, 3);
-
             });
         });
     }
