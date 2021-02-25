@@ -32,7 +32,7 @@ export namespace SearchCommands {
             let threadChoice = await vscode.window.showQuickPick(items, { placeHolder: message });
             if (debuggerPaused() && threadChoice !== undefined) {
                 let targetThread: number = parseInt(threadChoice.command);
-                VariableSearchDebugAdapterTracker.selectedThreads.push(targetThread); 
+                VariableSearchDebugAdapterTracker.selectedThreads.push(targetThread);
             }
         }
     }
@@ -66,35 +66,55 @@ export namespace SearchCommands {
                     i++;
                     return res;
                 });
-                let frameChoice: any = await vscode.window.showQuickPick(items, { placeHolder: message});
+                let frameChoice: any = await vscode.window.showQuickPick(items, { placeHolder: message });
                 if (debuggerPaused() && frameChoice !== undefined) {
                     VariableSearchDebugAdapterTracker.selectedFrames.push(frameChoice.command);
                 }
             });
         }
-     }
+    }
 
-     export async function searchForTerm(): Promise<void> {
-         if (debuggerPaused()) {
-             if (!VariableSearchDebugAdapterTracker.selectedThreads.length) {
-                 await setThread("Before searching, select a thread...");
-             }
+    export async function searchForTerm(): Promise<void> {
+        if (debuggerPaused()) {
+            if (!VariableSearchDebugAdapterTracker.selectedThreads.length) {
+                await setThread("Before searching, select a thread...");
+            }
             if (!VariableSearchDebugAdapterTracker.selectedFrames.length) {
                 await setFrame("Before searching, select a stack frame...");
             }
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
+
+            let allThenAbles: Array<any> = Array<any>();
+
+            allThenAbles.push(
+                vscode.window.showInputBox({ prompt: "Search for?", }).then((term: string | undefined) => {
+                    if (term === undefined) {
+                        vscode.window.showErrorMessage("Must enter a term to search");
+                    }
+                })
+            );
+
             frameTargets.forEach(async (frame: number) => {
-                let scopes = await vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameid: frame });
-                VariableSearchDebugAdapterTracker.generateNewTracker();
-                scopes.forEach(async (s: any) => {
-                    VariableSearchDebugAdapterTracker.trackerReference?.addScope(new Scope(s.expensive, s.name,
-                        s.presentationHint, s.variablesReference));
-                });
+                allThenAbles.push(
+                    vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameid: frame }).then((scopes) => {
+                        VariableSearchDebugAdapterTracker.generateNewTracker();
+                        scopes.forEach(async (s: any) => {
+                            VariableSearchDebugAdapterTracker.trackerReference?.addScope(new Scope(s.expensive, s.name,
+                                s.presentationHint, s.variablesReference));
+                        });
+                    })
+                );
+                // how can we kick off asking for the search term ahead of time, while 
+                // we do the above?
+                // https://stackoverflow.com/questions/50924814/node-js-wait-for-multiple-async-calls-to-finish-before-continuing-in-code/50925514
+                // need to use Promise.all()
+                // or Task.WhenAll(RequestTerm(), OtherFunction())
                 //VariableSearchDebugAdapterTracker.trackerReference?.searchTerm()
+                //https://stackoverflow.com/questions/41292316/how-do-i-await-multiple-promises-in-parallel-without-fail-fast-behavior
             });
 
-         }
-     }
+        }
+    }
 
 
 
