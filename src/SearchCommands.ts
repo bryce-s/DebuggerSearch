@@ -85,32 +85,38 @@ export namespace SearchCommands {
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
 
             let allThenAbles: Array<any> = Array<any>();
+            
+            let searchTerm: string = '';
 
             allThenAbles.push(
-                vscode.window.showInputBox({ prompt: "Search for?", }).then((term: string | undefined) => {
+                vscode.window.showInputBox({ prompt: "Search for term in {Thread} , {Frame}", }).then((term: string | undefined) => {
                     if (term === undefined) {
                         vscode.window.showErrorMessage("Must enter a term to search");
+                        return;
                     }
+                    searchTerm = term;
                 })
             );
 
             frameTargets.forEach(async (frame: number) => {
                 allThenAbles.push(
-                    vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameid: frame }).then((scopes) => {
-                        VariableSearchDebugAdapterTracker.generateNewTracker();
+                    vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame }).then((message) => {
+                        if (message === undefined) {
+                            return;
+                        }
+                        let scopes = message.scopes;
                         scopes.forEach(async (s: any) => {
                             VariableSearchDebugAdapterTracker.trackerReference?.addScope(new Scope(s.expensive, s.name,
                                 s.presentationHint, s.variablesReference));
                         });
                     })
                 );
-                // how can we kick off asking for the search term ahead of time, while 
-                // we do the above?
-                // https://stackoverflow.com/questions/50924814/node-js-wait-for-multiple-async-calls-to-finish-before-continuing-in-code/50925514
-                // need to use Promise.all()
-                // or Task.WhenAll(RequestTerm(), OtherFunction())
-                //VariableSearchDebugAdapterTracker.trackerReference?.searchTerm()
-                //https://stackoverflow.com/questions/41292316/how-do-i-await-multiple-promises-in-parallel-without-fail-fast-behavior
+
+                await Promise.all(allThenAbles);
+
+                VariableSearchDebugAdapterTracker.generateNewTracker();
+                VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, 3);
+
             });
 
         }

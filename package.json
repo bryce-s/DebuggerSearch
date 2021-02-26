@@ -34,6 +34,11 @@
 				"command": "variableSearch.setFrame",
 				"category": "VariableSearch",
 				"title": "Set Target Stack Frame"
+			},
+			{
+				"command": "variableSearch.searchForTerm",
+				"category": "VariableSearch",
+				"title": "Search for Term"
 			}
 		]
 	},

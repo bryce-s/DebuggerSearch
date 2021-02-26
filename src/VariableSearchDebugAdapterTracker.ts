@@ -171,11 +171,14 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     handleScopesRecv(message: any): void {
             // i think the only time this is called is when execution is paused?
             // this should be the case, but we will want to defer doing work until a search is actually run.
-            VariableSearchDebugAdapterTracker.generateNewTracker();
+        if (message.success) {
+
+       //     VariableSearchDebugAdapterTracker.generateNewTracker();
 
             message.body.scopes.forEach((s: any) => {
                 VariableSearchDebugAdapterTracker.trackerReference!.addScope(new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference));
             });
+        }
 
     }
 
