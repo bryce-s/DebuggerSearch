@@ -1,7 +1,9 @@
 import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
 import * as vscode from 'vscode';
 import Constants from './Constants';
-import { Scope, ThreadTracker } from './DebuggerObjectRepresentations';
+import { Scope, ThreadTracker, Variable } from './DebuggerObjectRepresentations';
+import { resolve } from 'path';
+import { rejects } from 'assert';
 
 export namespace SearchCommands {
 
@@ -45,14 +47,15 @@ export namespace SearchCommands {
                 await setThread("First, choose a thread...");
                 selectedThreads = VariableSearchDebugAdapterTracker.selectedThreads;
             }
-            selectedThreads.forEach(async (threadId: any) => {
+
+            for (let threadId of selectedThreads) {
                 let frames = await vscode.debug.activeDebugSession?.customRequest(Constants.stackTrace, {
                     threadId: threadId,
                     startFrame: 0,
                     levels: 20, //todo: get this from a setting, or something.
                 });
                 if (!frames) {
-                    vscode.window.showErrorMessage("No stack frames found.");
+                    await vscode.window.showErrorMessage("No stack frames found.");
                     return;
                 }
                 frames = frames.stackFrames;
@@ -69,8 +72,13 @@ export namespace SearchCommands {
                 let frameChoice: any = await vscode.window.showQuickPick(items, { placeHolder: message });
                 if (debuggerPaused() && frameChoice !== undefined) {
                     VariableSearchDebugAdapterTracker.selectedFrames.push(frameChoice.command);
+                } else {
+                    // this crashes things..
+                    const message: string = "Failed to select a frame!";
+                    vscode.window.showErrorMessage(message);
+                    return Promise.reject(message);
                 }
-            });
+            }
         }
     }
 
@@ -83,41 +91,42 @@ export namespace SearchCommands {
                 await setFrame("Before searching, select a stack frame...");
             }
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
-
-            let allThenAbles: Array<any> = Array<any>();
-            
             let searchTerm: string = '';
 
-            allThenAbles.push(
-                vscode.window.showInputBox({ prompt: "Search for term in {Thread} , {Frame}", }).then((term: string | undefined) => {
-                    if (term === undefined) {
-                        vscode.window.showErrorMessage("Must enter a term to search");
-                        return;
-                    }
-                    searchTerm = term;
-                })
+            let termAndScopes = await Promise.all(
+                [vscode.window.showInputBox({ prompt: "Search for term in {Thread} , {Frame}" })].concat(
+                    frameTargets.map(async (frame: number) => {
+                        return vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
+                    }))
             );
 
-            frameTargets.forEach(async (frame: number) => {
-                allThenAbles.push(
-                    vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame }).then((message) => {
-                        if (message === undefined) {
-                            return;
-                        }
-                        let scopes = message.scopes;
-                        scopes.forEach(async (s: any) => {
-                            VariableSearchDebugAdapterTracker.trackerReference?.addScope(new Scope(s.expensive, s.name,
-                                s.presentationHint, s.variablesReference));
-                        });
-                    })
-                );
+            if (termAndScopes.some((result: any) => termAndScopes === undefined)) {
+                vscode.window.showErrorMessage("failed to collect either variable scope info or the search term.");
+                return;
+            }
 
-                await Promise.all(allThenAbles);
+            VariableSearchDebugAdapterTracker.generateNewTracker();
 
-                VariableSearchDebugAdapterTracker.generateNewTracker();
-                VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, 3);
-
+            termAndScopes.forEach((result: any) => {
+                if (typeof result === 'string') {
+                   searchTerm = result; 
+                } else {
+                    // it's not undefined, so it's scopes object.
+                    if (result === undefined) {
+                        return;
+                    }
+                    let message = result;
+                    let scopes = message.scopes;
+                    scopes.forEach((s: any) => {
+                       VariableSearchDebugAdapterTracker.trackerReference?.addScope(
+                           new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference)
+                       );
+                    });
+                }
             });
+
+            VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, 3);
+
 
         }
     }
