@@ -78,14 +78,29 @@ export default class ScopeTraverser implements VariableTracker {
         this.openRequests.set(seq, variableReference);
     }
 
+    private printSearchingMessage(term: string, depth: number, openChannel: boolean, clearChannel: boolean, 
+                                  channel: vscode.OutputChannel | undefined) {
+        if (channel !== undefined) {
+            if (clearChannel) {
+                channel.clear();
+            }
+            if (openChannel) {
+                channel.show();
+            } 
+            channel.appendLine(`Searching for: ${term} at depth: ${depth}...`);
+            channel.appendLine(Constants.outputDivider);
+        }
+    }
+
     public searchTerm(t: string, scopeId?: string, regex?: boolean, depth?: number): any {
         this.searchInProgress = true;
         this.term = t;
         this.depthToSearch = (depth === undefined) ? 3 : depth;
         this.searchWithRegex = (regex !== undefined) ? regex : false;
 
+        let channel = VariableSearchDebugAdapterTracker.outputChannel;
+        this.printSearchingMessage(this.term, this.depthToSearch, true, true, channel);
         this.logger.writeLog(`Searching term: ${t} at depth ${depth}.`);
-
 
         if (this.scopes === undefined) {
             throw new Error("we need to ensure scopes are populated by this point");
@@ -206,11 +221,15 @@ export default class ScopeTraverser implements VariableTracker {
         return false;
     }
 
-    private printResultsToConsole(results: Array<SearchResult>, console: vscode.OutputChannel | undefined) {
-        if (VariableSearchDebugAdapterTracker.outputChannel !== undefined) {
+    // need to print "searching..." before this, or something similar.
+    private printResultsToConsole(results: Array<SearchResult>, channel: vscode.OutputChannel | undefined) {
+        if (channel !== undefined) {
             results.forEach(result => {
-                console!.appendLine(`- ${result.eval}\n${result.result}`);
+                channel!.appendLine(`- ${result.eval}\n${result.result}`);
             });
+            channel?.appendLine(Constants.outputDivider);
+            channel?.appendLine(`Search complete. ${this.results?.length} results found.`);
+            channel?.appendLine(Constants.outputDivider);
         }
     }
     
