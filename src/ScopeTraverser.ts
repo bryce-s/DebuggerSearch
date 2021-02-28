@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import VariableTracker from './VariableTracker';
 import { Scope, Variable, SearchResult, VariableInfo, VariableSearchLogger } from './DebuggerObjectRepresentations';
 import Constants from './Constants';
+import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
 
 export default class ScopeTraverser implements VariableTracker {
 
@@ -197,10 +198,26 @@ export default class ScopeTraverser implements VariableTracker {
             this.searchInProgress = false;
             this.searchWithRegex = false;
             console.log(`results:`, this.results);
-            vscode.debug.activeDebugConsole.append(JSON.stringify(this.results, null, 2));
-            // vscode.window.createoutputchanne
+
+            let outputChannel = VariableSearchDebugAdapterTracker.outputChannel;
+            this.printResultsToConsole(this.results, outputChannel);
+            this.openOutputWindow(outputChannel);
         }
         return false;
+    }
+
+    private printResultsToConsole(results: Array<SearchResult>, console: vscode.OutputChannel | undefined) {
+        if (VariableSearchDebugAdapterTracker.outputChannel !== undefined) {
+            results.forEach(result => {
+                console!.appendLine(`- ${result.eval}\n${result.result}`);
+            });
+        }
+    }
+    
+    private openOutputWindow(console: vscode.OutputChannel | undefined) {
+        if (console !== undefined) {
+            console.show();
+        }
     }
 
 

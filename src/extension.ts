@@ -42,6 +42,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("variableSearch.searchForTerm", SearchCommands.searchForTerm)
     );
+
+    VariableSearchDebugAdapterTracker.outputChannel = vscode.window.createOutputChannel("Debugger Search");
+
 }
 
 

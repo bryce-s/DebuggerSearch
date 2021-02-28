@@ -1,5 +1,6 @@
 import { DebugAdapterTracker, DebugAdapterTrackerFactory,  } from 'vscode';
 import Constants from './Constants';
+import * as vscode from 'vscode';
 import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope, VariableSearchLogger } from './DebuggerObjectRepresentations';
 import VariableTracker from './VariableTracker';
 import ScopeTraverser from './ScopeTraverser';
@@ -7,51 +8,12 @@ import ScopeTraverser from './ScopeTraverser';
 
 export default class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
 
-    //private tracker!: VariableTracker; 
-
     public static threadTracker: ThreadTracker;
-
-    //#region selected threads for search
-    private static _selectedThreads: Array<number> | undefined = undefined;
-
-    private static allocateSelectedThreadsIfNeeded(): void {
-        if (VariableSearchDebugAdapterTracker._selectedThreads === undefined) {
-            VariableSearchDebugAdapterTracker._selectedThreads = new Array<number>();
-        }
-    }
-
-    public static get selectedThreads(): Array<number> {
-        this.allocateSelectedThreadsIfNeeded();
-        return VariableSearchDebugAdapterTracker._selectedThreads!;
-    }
-    public static set selectedThreads(threads: Array<number>) {
-        this.allocateSelectedThreadsIfNeeded();
-        VariableSearchDebugAdapterTracker._selectedThreads = VariableSearchDebugAdapterTracker._selectedThreads?.concat(threads);
-    }
-    //#endregion
-
-
-    //#region selected frames for search
-    private static _selectedFrames: Array<number> | undefined = undefined;
-
-    private static allocateSelectedFramesIfNeeded(): void {
-        if (VariableSearchDebugAdapterTracker._selectedFrames === undefined) {
-            VariableSearchDebugAdapterTracker._selectedFrames = new Array<number>();
-        }
-    }
-
-    public static get selectedFrames(): Array<number> {
-        this.allocateSelectedFramesIfNeeded();
-        return VariableSearchDebugAdapterTracker._selectedFrames!;
-    }
-    public static set selectedFrames(threads: Array<number>) {
-        this.allocateSelectedFramesIfNeeded();
-        VariableSearchDebugAdapterTracker._selectedFrames = VariableSearchDebugAdapterTracker._selectedFrames?.concat(threads);
-    }
-    //#endregion
 
     public static trackerReference: VariableTracker | undefined = undefined;
     public static debuggerPaused: boolean = false;
+
+    public static outputChannel: vscode.OutputChannel | undefined = undefined;
 
     constructor() {
 
@@ -219,4 +181,55 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
             console.log("Debug Adapter exited with signal", signal);
         }
     }
+
+
+    //#region selected threads for search
+    private static _selectedThreads: Array<number> | undefined = undefined;
+
+    private static allocateSelectedThreadsIfNeeded(): void {
+        if (VariableSearchDebugAdapterTracker._selectedThreads === undefined) {
+            VariableSearchDebugAdapterTracker._selectedThreads = new Array<number>();
+        }
+    }
+
+    public static get selectedThreads(): Array<number> {
+        this.allocateSelectedThreadsIfNeeded();
+        return VariableSearchDebugAdapterTracker._selectedThreads!;
+    }
+    public static set selectedThreads(threads: Array<number>) {
+        this.allocateSelectedThreadsIfNeeded();
+        VariableSearchDebugAdapterTracker._selectedThreads = VariableSearchDebugAdapterTracker._selectedThreads?.concat(threads);
+    }
+
+    public static clearSelectedThreads(): void {
+        VariableSearchDebugAdapterTracker._selectedThreads = undefined;
+    }
+    
+    //#endregion
+
+
+    //#region selected frames for search
+    private static _selectedFrames: Array<number> | undefined = undefined;
+
+    private static allocateSelectedFramesIfNeeded(): void {
+        if (VariableSearchDebugAdapterTracker._selectedFrames === undefined) {
+            VariableSearchDebugAdapterTracker._selectedFrames = new Array<number>();
+        }
+    }
+
+    public static get selectedFrames(): Array<number> {
+        this.allocateSelectedFramesIfNeeded();
+        return VariableSearchDebugAdapterTracker._selectedFrames!;
+    }
+    public static set selectedFrames(threads: Array<number>) {
+        this.allocateSelectedFramesIfNeeded();
+        VariableSearchDebugAdapterTracker._selectedFrames = VariableSearchDebugAdapterTracker._selectedFrames?.concat(threads);
+    }
+
+    public static clearSelectedFrames(): void {
+       VariableSearchDebugAdapterTracker._selectedFrames = undefined; 
+    }
+
+    //#endregion
+
 }

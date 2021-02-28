@@ -82,19 +82,31 @@ export namespace SearchCommands {
         }
     }
 
+    async function clearThreadsAndFrame(): Promise<void> {
+        VariableSearchDebugAdapterTracker.clearSelectedFrames();
+        VariableSearchDebugAdapterTracker.clearSelectedThreads();
+        await setFramesAndThreadsIfNeeded();
+    }
+
+    async function setFramesAndThreadsIfNeeded(): Promise<void> {
+        if (!VariableSearchDebugAdapterTracker.selectedThreads.length) {
+            await setThread("Before searching, select a thread...");
+        }
+        if (!VariableSearchDebugAdapterTracker.selectedFrames.length) {
+            await setFrame("Before searching, select a stack frame...");
+        }
+    }
+
     export async function searchForTerm(): Promise<void> {
         if (debuggerPaused()) {
-            if (!VariableSearchDebugAdapterTracker.selectedThreads.length) {
-                await setThread("Before searching, select a thread...");
-            }
-            if (!VariableSearchDebugAdapterTracker.selectedFrames.length) {
-                await setFrame("Before searching, select a stack frame...");
-            }
+
+            await setFramesAndThreadsIfNeeded();
+
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
             let searchTerm: string = '';
 
             let termAndScopes = await Promise.all(
-                [vscode.window.showInputBox({ prompt: "Search for term in {Thread} , {Frame}" })].concat(
+                [vscode.window.showInputBox({ prompt: "Search for term in {Thread} , {Frame}." })].concat(
                     frameTargets.map(async (frame: number) => {
                         return vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
                     }))
@@ -126,8 +138,6 @@ export namespace SearchCommands {
             });
 
             VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, 3);
-
-
         }
     }
 
