@@ -87,7 +87,13 @@ export default class ScopeTraverser implements VariableTracker {
             if (openChannel) {
                 channel.show();
             } 
-            channel.appendLine(`Searching for: ${term} at depth: ${depth}...`);
+            if (!clearChannel) {
+                channel.appendLine(Constants.outputDivider);
+            }
+            channel.appendLine(`Searching for:  ${term}`);
+            channel.appendLine(`In thread:      ${VariableSearchDebugAdapterTracker.selectedThreads[0]}`);
+            channel.appendLine(`In stack frame: ${VariableSearchDebugAdapterTracker.selectedThreads[0]}`);
+            channel.appendLine(`At depth:       ${depth}`);
             channel.appendLine(Constants.outputDivider);
         }
     }
@@ -196,8 +202,8 @@ export default class ScopeTraverser implements VariableTracker {
                     this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt));
                     this.visited.add(info.variableReference);
                 }
-                if (checkString(info.evaluateName || '', this.term) || checkString(info.name || '', this.term) 
-                    || checkString(info.value || '', this.term)) {
+                if ((checkString(info.evaluateName || '', this.term) || checkString(info.name || '', this.term) 
+                    || checkString(info.value || '', this.term)) && info.evaluateName !== undefined) {
 				    let resultsFoundBeforeAdd: number = this.foundResults.size;
 					this.foundResults.add(info.variableReference);
 				    if (resultsFoundBeforeAdd !== this.foundResults.size) {
@@ -206,7 +212,6 @@ export default class ScopeTraverser implements VariableTracker {
                 }
             });
         }
-
 
         if (this.dfsStack.length === 0) {
             this.term = '';
@@ -218,6 +223,7 @@ export default class ScopeTraverser implements VariableTracker {
             this.printResultsToConsole(this.results, outputChannel);
             this.openOutputWindow(outputChannel);
         }
+
         return false;
     }
 
@@ -228,7 +234,7 @@ export default class ScopeTraverser implements VariableTracker {
                 channel!.appendLine(`- ${result.eval}\n${result.result}`);
             });
             channel?.appendLine(Constants.outputDivider);
-            channel?.appendLine(`Search complete. ${this.results?.length} results found.`);
+            channel?.appendLine(`Search complete. ${this.results?.length} ${(this.results.length === 1) ? "result" : "results"} found.`);
             channel?.appendLine(Constants.outputDivider);
         }
     }

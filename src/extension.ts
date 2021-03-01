@@ -26,10 +26,10 @@ import { SearchCommands } from './SearchCommands';
 
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
+
     // lets us dispose of the listener when it's done
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
     
-    // might wanna make the callback async here, then we can await functions inside it
     context.subscriptions.push(
 		vscode.commands.registerCommand("variableSearch.search", SearchCommands.searchCommand)
 	);

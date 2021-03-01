@@ -2,7 +2,7 @@ import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTrack
 import * as vscode from 'vscode';
 import Constants from './Constants';
 import { Scope, ThreadTracker, Variable } from './DebuggerObjectRepresentations';
-import { resolve } from 'path';
+import { parse, resolve } from 'path';
 import { rejects } from 'assert';
 
 export namespace SearchCommands {
@@ -31,7 +31,10 @@ export namespace SearchCommands {
                     command: `${threadInfo.id}`,
                 };
             });
-            let threadChoice = await vscode.window.showQuickPick(items, { placeHolder: message });
+            let threadChoice = await vscode.window.showQuickPick(items, {
+                   placeHolder: message,
+                   ignoreFocusOut: true
+                });
             if (debuggerPaused() && threadChoice !== undefined) {
                 let targetThread: number = parseInt(threadChoice.command);
                 VariableSearchDebugAdapterTracker.selectedThreads.push(targetThread);
@@ -69,7 +72,10 @@ export namespace SearchCommands {
                     i++;
                     return res;
                 });
-                let frameChoice: any = await vscode.window.showQuickPick(items, { placeHolder: message });
+                let frameChoice: any = await vscode.window.showQuickPick(items, {
+                        placeHolder: message,
+                        ignoreFocusOut: true
+                     });
                 if (debuggerPaused() && frameChoice !== undefined) {
                     VariableSearchDebugAdapterTracker.selectedFrames.push(frameChoice.command);
                 } else {
@@ -79,6 +85,23 @@ export namespace SearchCommands {
                     return Promise.reject(message);
                 }
             }
+        }
+    }
+
+    export async function setSearchDepth(): Promise<void> {
+        let candidates = Array.from(Array(10).keys()).filter(c => ![0,1,2].includes(c));;
+        const choice = await vscode.window.showQuickPick(candidates.map(c => c.toString()), 
+                      {
+                          placeHolder: "Select depth to search...",
+                          ignoreFocusOut: true
+                      });
+        if (choice !== undefined) {
+            VariableSearchDebugAdapterTracker.depth = parseInt(choice);
+        }
+        else {
+            const message: string = "Failed to select search depth!";
+            vscode.window.showErrorMessage(message);
+            return Promise.reject(message);
         }
     }
 
@@ -95,6 +118,9 @@ export namespace SearchCommands {
         if (!VariableSearchDebugAdapterTracker.selectedFrames.length) {
             await setFrame("Before searching, select a stack frame...");
         }
+        if (VariableSearchDebugAdapterTracker.depth === undefined) {
+            await setSearchDepth();
+        }
     }
 
     export async function searchForTerm(): Promise<void> {
@@ -106,7 +132,11 @@ export namespace SearchCommands {
             let searchTerm: string = '';
 
             let termAndScopes = await Promise.all(
-                [vscode.window.showInputBox({ prompt: "Search for term in {Thread} , {Frame}." })].concat(
+                [vscode.window.showInputBox(
+                    { 
+                        prompt: "Search for term in {Thread} , {Frame}.",
+                        ignoreFocusOut: true
+                    })].concat(
                     frameTargets.map(async (frame: number) => {
                         return vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
                     }))
@@ -137,7 +167,9 @@ export namespace SearchCommands {
                 }
             });
 
-            VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, 3);
+            const depth = (VariableSearchDebugAdapterTracker.depth !== undefined) ? VariableSearchDebugAdapterTracker.depth : 3 ; 
+
+            VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, depth);
         }
     }
 
@@ -145,7 +177,11 @@ export namespace SearchCommands {
 
     export function searchCommand(): void {
         if (debuggerPaused()) {
-            vscode.window.showInputBox({ prompt: "Search for?", }).then(
+            vscode.window.showInputBox(
+                { 
+                    prompt: "Search for?",
+                    ignoreFocusOut: true
+                 }).then(
                 (term: string | undefined) => {
                     // success
                     if (term === undefined) {
@@ -160,7 +196,10 @@ export namespace SearchCommands {
                                 command: `${threadInfo.id}`,
                             };
                         });
-                        vscode.window.showQuickPick(options, { canPickMany: false }).then((option: any) => {
+                        vscode.window.showQuickPick(options, {
+                             canPickMany: false,
+                             ignoreFocusOut: true
+                            }).then((option: any) => {
                             if (!option) {
                                 return;
                             }

@@ -182,6 +182,11 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         }
     }
 
+    //#region selected depth for search
+
+    public static depth: number | undefined = undefined;
+
+    //#endregion
 
     //#region selected threads for search
     private static _selectedThreads: Array<number> | undefined = undefined;
