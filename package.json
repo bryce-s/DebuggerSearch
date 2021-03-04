@@ -39,6 +39,16 @@
 				"command": "variableSearch.searchForTerm",
 				"category": "VariableSearch",
 				"title": "Search for Term"
+			},
+			{
+				"command": "variableSearch.setSearchDepth",
+				"category": "VariableSearch",
+				"title": "Set Search Depth"
+			},
+			{
+				"command": "variableSearch.resetParameters",
+				"category": "VariableSearch",
+				"title": "Reset Search Parameters"
 			}
 		]
 	},

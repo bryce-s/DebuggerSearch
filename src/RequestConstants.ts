@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 
-
-
 class Commands {
     public readonly runInTerminal: string = 'runInTerminal';
     public readonly variables: string = 'variables';

@@ -227,7 +227,6 @@ export default class ScopeTraverser implements VariableTracker {
         return false;
     }
 
-    // need to print "searching..." before this, or something similar.
     private printResultsToConsole(results: Array<SearchResult>, channel: vscode.OutputChannel | undefined) {
         if (channel !== undefined) {
             results.forEach(result => {
@@ -251,7 +250,9 @@ export default class ScopeTraverser implements VariableTracker {
             this.variableDataRequested.add(varRef);
             if (vscode.debug.activeDebugSession === undefined) {
                 // we're not debugging
-                throw new Error('woof');
+                const message: string = "Active debug session required.";
+                vscode.window.showErrorMessage(message);
+                throw new Error(message);
             }
             (this.logger.enabled )? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : ()=>{};
             // can't just resolve the promise; no way to bind it back:

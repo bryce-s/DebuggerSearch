@@ -4,6 +4,7 @@ import Constants from './Constants';
 import { Scope, ThreadTracker, Variable } from './DebuggerObjectRepresentations';
 import { parse, resolve } from 'path';
 import { rejects } from 'assert';
+import { clear } from 'console';
 
 export namespace SearchCommands {
 
@@ -12,7 +13,9 @@ export namespace SearchCommands {
         if (vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused) {
             return true;
         }
-        debuggerRunningOrExitedError();
+        vscode.window.showWarningMessage(
+            debuggerRunningOrExitedError()
+        );
         return false;
     }
 
@@ -88,6 +91,7 @@ export namespace SearchCommands {
         }
     }
 
+    // not dependent on having a running debug session.
     export async function setSearchDepth(): Promise<void> {
         let candidates = Array.from(Array(10).keys()).filter(c => ![0,1,2].includes(c));;
         const choice = await vscode.window.showQuickPick(candidates.map(c => c.toString()), 
@@ -96,7 +100,7 @@ export namespace SearchCommands {
                           ignoreFocusOut: true
                       });
         if (choice !== undefined) {
-            VariableSearchDebugAdapterTracker.depth = parseInt(choice);
+                VariableSearchDebugAdapterTracker.depth = parseInt(choice);
         }
         else {
             const message: string = "Failed to select search depth!";
@@ -105,10 +109,19 @@ export namespace SearchCommands {
         }
     }
 
-    async function clearThreadsAndFrame(): Promise<void> {
+    export function resetParameters(): void {
+        clearThreadsAndFrame();
+        resetSearchDepth();
+    }
+
+
+    function resetSearchDepth(): void {
+        VariableSearchDebugAdapterTracker.depth = undefined;
+    }
+
+    function clearThreadsAndFrame(): void {
         VariableSearchDebugAdapterTracker.clearSelectedFrames();
         VariableSearchDebugAdapterTracker.clearSelectedThreads();
-        await setFramesAndThreadsIfNeeded();
     }
 
     async function setFramesAndThreadsIfNeeded(): Promise<void> {
@@ -134,7 +147,7 @@ export namespace SearchCommands {
             let termAndScopes = await Promise.all(
                 [vscode.window.showInputBox(
                     { 
-                        prompt: "Search for term in {Thread} , {Frame}.",
+                        prompt: "Search for term in {Thread} , {Frame}.\nOr type --reset to change search parameters.\n",
                         ignoreFocusOut: true
                     })].concat(
                     frameTargets.map(async (frame: number) => {
@@ -142,8 +155,7 @@ export namespace SearchCommands {
                     }))
             );
 
-            if (termAndScopes.some((result: any) => termAndScopes === undefined)) {
-                vscode.window.showErrorMessage("failed to collect either variable scope info or the search term.");
+            if (termAndScopes.some((result: any) => result === undefined)) {
                 return;
             }
 

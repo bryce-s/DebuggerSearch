@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // lets us dispose of the listener when it's done
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
-    
+
     context.subscriptions.push(
 		vscode.commands.registerCommand("variableSearch.search", SearchCommands.searchCommand)
 	);
@@ -38,6 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
 	);
     context.subscriptions.push(
         vscode.commands.registerCommand("variableSearch.setFrame", SearchCommands.setFrame)
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand("variableSearch.setSearchDepth", SearchCommands.setSearchDepth)
+    );
+    context.subscriptions.push( 
+        vscode.commands.registerCommand("variableSearch.resetParameters", SearchCommands.resetParameters)
     );
     context.subscriptions.push(
         vscode.commands.registerCommand("variableSearch.searchForTerm", SearchCommands.searchForTerm)

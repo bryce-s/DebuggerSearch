@@ -14,7 +14,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     public static debuggerPaused: boolean = false;
 
     public static outputChannel: vscode.OutputChannel | undefined = undefined;
-
+    
     constructor() {
 
         VariableSearchDebugAdapterTracker.generateNewTracker();
@@ -32,38 +32,23 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         // sending a message to the debug adapter
 
         if (message.command === Constants.scopes) {
-            console.log('scopes Online');
+
         }
         if (message.command === Constants.variables) {
             VariableSearchDebugAdapterTracker.trackerReference!.logRequest(message.seq, message.arguments.variablesReference);
         }
 
         if (message.command === Constants.stackTrace) {
-            console.log('requesting stackTrace');
-            console.log(message.body);
         }
 
         if (message.command === Constants.threads) {
-            console.log('requesting threads');
         }
 
-        // let requestForBottomVariable = {
-        //     command: "variables",
-        //     arguments: {
-        //       variablesReference: 10,
-        //     },
-        //     type: "request",
-        //     seq: 17,
-        //   };
-          
-          // vscode.debug.activeDebugSession?.customRequest("variables", )
-
-        //vscode.debug.activeDebugSession?.customRequest()
     }
 
 
     onDidSendMessage(message: any) {
-        console.log("Received message from debug adapter:\n", message);
+        // recv message from debug adapter
         
         // https://microsoft.github.io/debug-adapter-protocol/specification
         if (message.type === Constants.event) {
