@@ -222,4 +222,29 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
 
     //#endregion
 
+    //#region selected scopes for search
+
+    private static _selectedScopes: Array<any> | undefined = undefined;
+
+    private static allocateSelectedScopesIfNeeded(): void {
+        if (VariableSearchDebugAdapterTracker._selectedScopes === undefined) {
+            VariableSearchDebugAdapterTracker._selectedScopes = new Array<any>();
+        }
+    }
+
+    public static get selectedScopes(): Array<any> {
+        this.allocateSelectedScopesIfNeeded();
+        return VariableSearchDebugAdapterTracker._selectedScopes!;
+    }
+
+    public static set selectedScopes(scopes: Array<any>) {
+        this.allocateSelectedScopesIfNeeded();
+        VariableSearchDebugAdapterTracker._selectedFrames = VariableSearchDebugAdapterTracker._selectedScopes?.concat(scopes); 
+    }
+
+    public static clearSelectedScopes(): void {
+        VariableSearchDebugAdapterTracker._selectedFrames = undefined;
+    }
+
+
 }

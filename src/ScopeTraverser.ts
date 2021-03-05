@@ -244,7 +244,6 @@ export default class ScopeTraverser implements VariableTracker {
         }
     }
 
-
     private getVariableContents(varRef: number) {
         if (!this.variableDataRequested.has(varRef)) {
             this.variableDataRequested.add(varRef);

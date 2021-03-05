@@ -46,6 +46,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("variableSearch.resetParameters", SearchCommands.resetParameters)
     );
     context.subscriptions.push(
+        vscode.commands.registerCommand("variableSearch.setScope", SearchCommands.setScope)
+    );
+    context.subscriptions.push(
         vscode.commands.registerCommand("variableSearch.searchForTerm", SearchCommands.searchForTerm)
     );
 

@@ -49,6 +49,11 @@
 				"command": "variableSearch.resetParameters",
 				"category": "VariableSearch",
 				"title": "Reset Search Parameters"
+			},
+			{
+				"command": "variableSearch.setScope",
+				"category": "VariableSearch",
+				"title": "Set Scope for Search"
 			}
 		]
 	},

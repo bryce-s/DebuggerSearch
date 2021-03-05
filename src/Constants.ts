@@ -20,6 +20,9 @@ export default class Constants {
     //output
     public static readonly outputDivider = '-----------------';
 
+    // Scope types:
+    public static readonly allScopes = "All";
+
 }
 
 

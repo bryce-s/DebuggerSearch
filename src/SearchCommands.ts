@@ -1,7 +1,7 @@
 import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
 import * as vscode from 'vscode';
 import Constants from './Constants';
-import { Scope, ThreadTracker, Variable } from './DebuggerObjectRepresentations';
+import { Scope, ThreadTracker, Variable, VariableSearchLogger } from './DebuggerObjectRepresentations';
 import { parse, resolve } from 'path';
 import { rejects } from 'assert';
 import { clear } from 'console';
@@ -86,6 +86,55 @@ export namespace SearchCommands {
                     const message: string = "Failed to select a frame!";
                     vscode.window.showErrorMessage(message);
                     return Promise.reject(message);
+                }
+            }
+        }
+    }
+
+    export async function setScope(): Promise<void> {
+        if (debuggerPaused()) {
+            if (VariableSearchDebugAdapterTracker.selectedThreads.length < 1) {
+                vscode.window.showErrorMessage("A thread must be selected first");
+                await setThread();
+                if (VariableSearchDebugAdapterTracker.selectedFrames.length < 1) {
+            }
+                vscode.window.showErrorMessage("A frame must be selected first");
+                await setFrame();
+            }
+
+            let frame: number = VariableSearchDebugAdapterTracker.selectedFrames[0];
+
+            let scopeResponse: any = await vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
+
+            if (!scopeResponse || !scopeResponse.scopes) {
+                vscode.window.showErrorMessage("Failed to load scopes");
+                return;
+            }
+
+            let scopes = scopeResponse.scopes;
+
+            let scopeChoices = scopes.map((scope: any) => scope.name);
+            scopeChoices.unshift(Constants.allScopes);
+
+            let choiceOfScope = await vscode.window.showQuickPick(
+                scopeChoices,
+                {
+                    placeHolder: "Select scope to search...",
+                    ignoreFocusOut: true
+                }
+            );
+
+            if (choiceOfScope !== undefined) {
+                VariableSearchDebugAdapterTracker.clearSelectedScopes();
+                if (choiceOfScope === Constants.allScopes) {
+                    VariableSearchDebugAdapterTracker.selectedScopes.concat(scopes);
+                }
+                else {
+
+                    VariableSearchDebugAdapterTracker.selectedScopes.concat(
+                        scopes.filter((s: any) => s.name === choiceOfScope)
+                    );
+                    console.log(VariableSearchDebugAdapterTracker.selectedScopes);
                 }
             }
         }
