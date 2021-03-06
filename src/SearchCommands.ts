@@ -125,16 +125,12 @@ export namespace SearchCommands {
             );
 
             if (choiceOfScope !== undefined) {
-                VariableSearchDebugAdapterTracker.clearSelectedScopes();
+                VariableSearchDebugAdapterTracker.clearSelectedScope();
                 if (choiceOfScope === Constants.allScopes) {
-                    VariableSearchDebugAdapterTracker.selectedScopes.concat(scopes);
+                    VariableSearchDebugAdapterTracker.selectedScope = Constants.allScopes;
                 }
                 else {
-
-                    VariableSearchDebugAdapterTracker.selectedScopes.concat(
-                        scopes.filter((s: any) => s.name === choiceOfScope)
-                    );
-                    console.log(VariableSearchDebugAdapterTracker.selectedScopes);
+                    VariableSearchDebugAdapterTracker.selectedScope = scopes.filter((s: any) => s.name === choiceOfScope)[0];
                 }
             }
         }
@@ -220,11 +216,21 @@ export namespace SearchCommands {
                     }
                     let message = result;
                     let scopes = message.scopes;
-                    scopes.forEach((s: any) => {
-                       VariableSearchDebugAdapterTracker.trackerReference?.addScope(
-                           new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference)
-                       );
-                    });
+                    const selectedScope = VariableSearchDebugAdapterTracker.selectedScope;
+                    if (selectedScope === undefined || selectedScope === Constants.allScopes) {
+                        scopes.forEach((s: any) => {
+                            VariableSearchDebugAdapterTracker.trackerReference?.addScope(
+                                new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference)
+                            );
+                         });
+                    }
+                    else {
+                        VariableSearchDebugAdapterTracker.trackerReference?.addScope(
+                            new Scope(selectedScope.expensive, selectedScope.name, selectedScope.presentationHint, selectedScope.variablesReference)
+                        );
+                    }
+
+      
                 }
             });
 
