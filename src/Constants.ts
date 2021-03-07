@@ -16,12 +16,15 @@ export default class Constants {
     public static readonly variables: string = 'variables';
     public static readonly stackTrace: string = 'stackTrace';
     public static readonly threads: string = 'threads';
+    public static readonly reset: string = '--reset';
 
     //output
     public static readonly outputDivider = '-----------------';
 
     // Scope types:
     public static readonly allScopes = "All";
+
+
 
 }
 

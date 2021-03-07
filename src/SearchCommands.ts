@@ -173,6 +173,10 @@ export namespace SearchCommands {
         VariableSearchDebugAdapterTracker.clearSelectedThreads();
     }
 
+    function clearDepth() {
+       VariableSearchDebugAdapterTracker.depth = undefined; 
+    }
+
     async function setFramesAndThreadsIfNeeded(): Promise<void> {
         if (VariableSearchDebugAdapterTracker.selectedThread === undefined) {
             await setThread("Before searching, select a thread...");
@@ -198,9 +202,7 @@ export namespace SearchCommands {
                     { 
                         prompt: `Search in ${
                             VariableSearchDebugAdapterTracker.selectedThread.label
-                        }, stack frame: ${
-                            VariableSearchDebugAdapterTracker.selectedFrame.label
-                        }, or reset parameters (--reset)\n\n`,
+                        }, or reset parameters (${Constants.reset})`,
                         ignoreFocusOut: true
                     })].concat(
                     frameTargets.map(async (frame: number) => {
@@ -209,6 +211,13 @@ export namespace SearchCommands {
             );
 
             if (termAndScopes.some((result: any) => result === undefined)) {
+                return;
+            }
+
+            if (termAndScopes.some((result: any) => result === Constants.reset)) {
+                clearThreadsAndFrame();
+                clearDepth();
+                searchForTerm();
                 return;
             }
 
