@@ -138,7 +138,7 @@ export namespace SearchCommands {
 
     // not dependent on having a running debug session.
     export async function setSearchDepth(): Promise<void> {
-        let candidates = Array.from(Array(10).keys()).filter(c => ![0,1,2].includes(c));;
+        let candidates = Array.from(Array(10).keys()).filter(c => ![0,1].includes(c));;
         const choice = await vscode.window.showQuickPick(candidates.map(c => c.toString()), 
                       {
                           placeHolder: "Select depth to search...",
@@ -188,7 +188,7 @@ export namespace SearchCommands {
 
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
             let searchTerm: string = '';
-
+            
             let termAndScopes = await Promise.all(
                 [vscode.window.showInputBox(
                     { 
@@ -229,8 +229,6 @@ export namespace SearchCommands {
                             new Scope(selectedScope.expensive, selectedScope.name, selectedScope.presentationHint, selectedScope.variablesReference)
                         );
                     }
-
-      
                 }
             });
 

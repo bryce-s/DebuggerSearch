@@ -10,16 +10,18 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:debuggersearch.helloWorld",
-		"onCommand:variableSearch.search"
+		"onCommand:variableSearch.search",
+		"onCommand:variableSearch.setThread",
+		"onCommand:variableSearch.setFrame",
+		"onCommand:variableSearch.searchForTerm",
+		"onCommand:variableSearch.setSearchDepth",
+		"onCommand:variableSearch.resetParameters",
+		"onCommand:variableSearch.setScope",
+		"onDebugAdapterProtocolTracker"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
-			{
-				"command": "debuggersearch.helloWorld",
-				"title": "Hello World"
-			},
 			{
 				"command": "variableSearch.search",
 				"category": "VariableSearch",

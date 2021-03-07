@@ -3,6 +3,7 @@ import VariableTracker from './VariableTracker';
 import { Scope, Variable, SearchResult, VariableInfo, VariableSearchLogger } from './DebuggerObjectRepresentations';
 import Constants from './Constants';
 import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
+import { SearchCommands } from './SearchCommands';
 
 export default class ScopeTraverser implements VariableTracker {
 
@@ -166,6 +167,10 @@ export default class ScopeTraverser implements VariableTracker {
     // returns: should we bail out?
     private traverseVariableTreeIterative(depth: number, checkString: Function): boolean {
 
+        if (!SearchCommands.debuggerPaused()) {
+            return true;
+        }
+
         // gonna be kinda tricky, since we need to 'start and stop...'
         while (this.dfsStack.length > 0) {
             let activeVariable: Variable | undefined = this.dfsStack.pop();
@@ -213,6 +218,12 @@ export default class ScopeTraverser implements VariableTracker {
             });
         }
 
+        this.finishSearch();
+
+        return false;
+    }
+
+    private finishSearch(): void {
         if (this.dfsStack.length === 0) {
             this.term = '';
             this.searchInProgress = false;
@@ -223,14 +234,15 @@ export default class ScopeTraverser implements VariableTracker {
             this.printResultsToConsole(this.results, outputChannel);
             this.openOutputWindow(outputChannel);
         }
-
-        return false;
     }
 
     private printResultsToConsole(results: Array<SearchResult>, channel: vscode.OutputChannel | undefined) {
         if (channel !== undefined) {
+            if (results.length) {
+                channel!.appendLine(`Results:`);
+            }
             results.forEach(result => {
-                channel!.appendLine(`- ${result.eval}\n${result.result}`);
+                channel!.appendLine(`- Object: ${result.eval}\n   Value: ${result.result}`);
             });
             channel?.appendLine(Constants.outputDivider);
             channel?.appendLine(`Search complete. ${this.results?.length} ${(this.results.length === 1) ? "result" : "results"} found.`);
@@ -253,7 +265,7 @@ export default class ScopeTraverser implements VariableTracker {
                 vscode.window.showErrorMessage(message);
                 throw new Error(message);
             }
-            (this.logger.enabled )? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : ()=>{};
+            (this.logger.enabled ) ? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : ()=>{};
             // can't just resolve the promise; no way to bind it back:
             vscode.debug.activeDebugSession?.customRequest(Constants.variables, { variablesReference: varRef });
         }
