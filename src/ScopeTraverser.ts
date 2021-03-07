@@ -91,10 +91,10 @@ export default class ScopeTraverser implements VariableTracker {
             if (!clearChannel) {
                 channel.appendLine(Constants.outputDivider);
             }
-            channel.appendLine(`Searching for:  ${term}`);
-            channel.appendLine(`In thread:      ${VariableSearchDebugAdapterTracker.selectedThreads[0]}`);
-            channel.appendLine(`In stack frame: ${VariableSearchDebugAdapterTracker.selectedThreads[0]}`);
-            channel.appendLine(`At depth:       ${depth}`);
+            channel.appendLine(`Searching for:   ${term}`);
+            channel.appendLine(`In thread:       ${VariableSearchDebugAdapterTracker.selectedThread.label}`);
+            channel.appendLine(`In stack frame:  ${VariableSearchDebugAdapterTracker.selectedFrame.label}`);
+            channel.appendLine(`At depth:        ${depth}`);
             channel.appendLine(Constants.outputDivider);
         }
     }

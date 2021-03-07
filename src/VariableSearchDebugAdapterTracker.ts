@@ -149,9 +149,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
                     };
                 })
             );
-        } else {
-            console.log(`error getting threads`);
-        }
+        } 
     }
 
 
@@ -160,11 +158,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     }
 
     onExit(code: number, signal: string) {
-        if (code) {
-            console.log("Debug Adapter exited with exit code", code);
-        } else {
-            console.log("Debug Adapter exited with signal", signal);
-        }
+
     }
 
     //#region selected depth for search
@@ -181,6 +175,8 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
             VariableSearchDebugAdapterTracker._selectedThreads = new Array<number>();
         }
     }
+
+    public static selectedThread: any | undefined = undefined;
 
     public static get selectedThreads(): Array<number> {
         this.allocateSelectedThreadsIfNeeded();
@@ -200,6 +196,8 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
 
     //#region selected frames for search
     private static _selectedFrames: Array<number> | undefined = undefined;
+
+    public static selectedFrame: any | undefined = undefined;
 
     private static allocateSelectedFramesIfNeeded(): void {
         if (VariableSearchDebugAdapterTracker._selectedFrames === undefined) {

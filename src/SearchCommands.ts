@@ -40,6 +40,7 @@ export namespace SearchCommands {
                 });
             if (debuggerPaused() && threadChoice !== undefined) {
                 let targetThread: number = parseInt(threadChoice.command);
+                VariableSearchDebugAdapterTracker.selectedThread = threadChoice;
                 VariableSearchDebugAdapterTracker.selectedThreads.push(targetThread);
             }
         }
@@ -81,6 +82,7 @@ export namespace SearchCommands {
                      });
                 if (debuggerPaused() && frameChoice !== undefined) {
                     VariableSearchDebugAdapterTracker.selectedFrames.push(frameChoice.command);
+                    VariableSearchDebugAdapterTracker.selectedFrame = frameChoice;
                 } else {
                     // this crashes things..
                     const message: string = "Failed to select a frame!";
@@ -93,16 +95,16 @@ export namespace SearchCommands {
 
     export async function setScope(): Promise<void> {
         if (debuggerPaused()) {
-            if (VariableSearchDebugAdapterTracker.selectedThreads.length < 1) {
+            if (VariableSearchDebugAdapterTracker.selectedThread === undefined) {
                 vscode.window.showErrorMessage("A thread must be selected first");
                 await setThread();
-                if (VariableSearchDebugAdapterTracker.selectedFrames.length < 1) {
             }
+            if (VariableSearchDebugAdapterTracker.selectedFrame === undefined) {
                 vscode.window.showErrorMessage("A frame must be selected first");
                 await setFrame();
             }
 
-            let frame: number = VariableSearchDebugAdapterTracker.selectedFrames[0];
+            let frame: number = VariableSearchDebugAdapterTracker.selectedFrame.command;
 
             let scopeResponse: any = await vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
 
@@ -165,15 +167,17 @@ export namespace SearchCommands {
     }
 
     function clearThreadsAndFrame(): void {
+        VariableSearchDebugAdapterTracker.selectedThread = undefined;
+        VariableSearchDebugAdapterTracker.selectedFrame = undefined;
         VariableSearchDebugAdapterTracker.clearSelectedFrames();
         VariableSearchDebugAdapterTracker.clearSelectedThreads();
     }
 
     async function setFramesAndThreadsIfNeeded(): Promise<void> {
-        if (!VariableSearchDebugAdapterTracker.selectedThreads.length) {
+        if (VariableSearchDebugAdapterTracker.selectedThread === undefined) {
             await setThread("Before searching, select a thread...");
         }
-        if (!VariableSearchDebugAdapterTracker.selectedFrames.length) {
+        if (VariableSearchDebugAdapterTracker.selectedFrame === undefined) {
             await setFrame("Before searching, select a stack frame...");
         }
         if (VariableSearchDebugAdapterTracker.depth === undefined) {
@@ -188,11 +192,15 @@ export namespace SearchCommands {
 
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
             let searchTerm: string = '';
-            
+
             let termAndScopes = await Promise.all(
                 [vscode.window.showInputBox(
                     { 
-                        prompt: "Search for term in {Thread} , {Frame}.\nOr type --reset to change search parameters.\n",
+                        prompt: `Search in ${
+                            VariableSearchDebugAdapterTracker.selectedThread.label
+                        }, stack frame: ${
+                            VariableSearchDebugAdapterTracker.selectedFrame.label
+                        }, or reset parameters (--reset)\n\n`,
                         ignoreFocusOut: true
                     })].concat(
                     frameTargets.map(async (frame: number) => {
