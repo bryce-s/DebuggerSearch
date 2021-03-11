@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope, VariableSearchLogger } from './DebuggerObjectRepresentations';
 import VariableTracker from './VariableTracker';
 import ScopeTraverser from './ScopeTraverser';
+import { SearchCommands } from './SearchCommands';
 
 
 export default class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
@@ -79,16 +80,20 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         }
         // works for steps
         if (message.event === Constants.continued) {
-            VariableSearchDebugAdapterTracker.debuggerPaused = false;
-            VariableSearchDebugAdapterTracker.threadTracker.clearThreads();
-            VariableSearchDebugAdapterTracker._selectedThreads = undefined;
+            this.debuggerContinuedOrExited();
         }
         if (message.event === Constants.exited || message.event === Constants.terminated) {
-            VariableSearchDebugAdapterTracker.debuggerPaused = false;
-            VariableSearchDebugAdapterTracker.threadTracker.clearThreads();
-            VariableSearchDebugAdapterTracker._selectedThreads = undefined;
+            this.debuggerContinuedOrExited();
         }
     }
+
+
+    private debuggerContinuedOrExited(): void {
+        VariableSearchDebugAdapterTracker.debuggerPaused = false;
+        VariableSearchDebugAdapterTracker.resetParameters();
+        VariableSearchDebugAdapterTracker._selectedThreads = undefined;
+    }
+
 
     handleVariablesUnderSearchRecv(message: any): void {
         if (message.success) {
@@ -227,5 +232,15 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     public static clearSelectedScope(): void {
         VariableSearchDebugAdapterTracker.selectedScope = undefined;
     }
+
+    //#endregion
+
+    //#region 
+    
+    public static resetParameters() {
+       SearchCommands.resetParameters(); 
+    }
+
+    //#endregion
 
 }

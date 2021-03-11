@@ -24,7 +24,8 @@ export default class Constants {
     // Scope types:
     public static readonly allScopes = "All";
 
-
+    // Variables reference types
+    public static readonly noChildren = 0;
 
 }
 

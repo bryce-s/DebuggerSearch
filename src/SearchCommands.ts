@@ -235,6 +235,7 @@ export namespace SearchCommands {
                     let scopes = message.scopes;
                     const selectedScope = VariableSearchDebugAdapterTracker.selectedScope;
                     if (selectedScope === undefined || selectedScope === Constants.allScopes) {
+                        VariableSearchDebugAdapterTracker.selectedScope = Constants.allScopes;
                         scopes.forEach((s: any) => {
                             VariableSearchDebugAdapterTracker.trackerReference?.addScope(
                                 new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference)
