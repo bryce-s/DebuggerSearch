@@ -21,7 +21,7 @@ export default class ScopeTraverser implements VariableTracker {
     private depthToSearch: number = 3;
 
     // how to tell if extension is deployed?
-    private logger: VariableSearchLogger = new VariableSearchLogger( true  );
+    private logger: VariableSearchLogger = new VariableSearchLogger( true );
 
     private term: string = '';
     private searchWithRegex: boolean = false;
@@ -91,9 +91,12 @@ export default class ScopeTraverser implements VariableTracker {
             if (!clearChannel) {
                 channel.appendLine(Constants.outputDivider);
             }
+
+            const selectedFrame = VariableSearchDebugAdapterTracker.selectedFrame;
+            
             channel.appendLine(`Searching for:   ${term}`);
             channel.appendLine(`In thread:       ${VariableSearchDebugAdapterTracker.selectedThread.label}`);
-            channel.appendLine(`In stack frame:  ${VariableSearchDebugAdapterTracker.selectedFrame.label}`);
+            channel.appendLine(`In stack frame:  ${selectedFrame.number}: ${selectedFrame.name}`);
             channel.appendLine(`In scope:        ${
                VariableSearchDebugAdapterTracker.selectedScope === Constants.allScopes ? "All Scopes" 
                : VariableSearchDebugAdapterTracker.selectedScope.name
@@ -160,7 +163,6 @@ export default class ScopeTraverser implements VariableTracker {
     // comp: do we want to regex? or just check if contains, etc.
     private traverseVariableTree(root: Variable, depth: number, pathToHere: Array<string>, comp: Function): void {
         this.visited.add(root.variablesReference);
-
         let childNodes: Array<Variable> | undefined = this.variableMapping.get(root.variablesReference);
         if (childNodes === undefined) {
             childNodes = new Array<Variable>();
@@ -207,17 +209,24 @@ export default class ScopeTraverser implements VariableTracker {
                 if (activeVariable === undefined) {
                     throw new Error("this can't be undefined");
                 }
+
+                const pathHere: Array<string> = activeVariable.nameEntries?.concat(info.name);
+
                 if (info.variableReference !== Constants.noChildren && !this.visited.has(info.variableReference)
                     && (activeVariable.depthFoundAt + 1) <= depth) {
-                    this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt));
+                    this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt, 
+                                       pathHere));
                     this.visited.add(info.variableReference);
                 }
+
+                const variablePath: string = pathHere.join('.');
+
                 if ((checkString(info.evaluateName || '', this.term) || checkString(info.name || '', this.term) 
                     || checkString(info.value || '', this.term)) && info.evaluateName !== undefined) {
 				    let resultsFoundBeforeAdd: number = this.foundResults.size;
-					this.foundResults.add(info.evaluateName);
+					this.foundResults.add(variablePath);
 				    if (resultsFoundBeforeAdd !== this.foundResults.size) {
-                    	this.results.push(new SearchResult(info.variableReference, info.value, info.evaluateName));
+                    	this.results.push(new SearchResult(info.variableReference, info.value, info.evaluateName, variablePath));
 					}
                 }
             });
@@ -233,6 +242,7 @@ export default class ScopeTraverser implements VariableTracker {
             this.term = '';
             this.searchInProgress = false;
             this.searchWithRegex = false;
+
             console.log(`results:`, this.results);
 
             let outputChannel = VariableSearchDebugAdapterTracker.outputChannel;
@@ -253,7 +263,7 @@ export default class ScopeTraverser implements VariableTracker {
                 channel!.appendLine(`Results:`);
             }
             results.forEach(result => {
-                channel!.appendLine(`- Object: ${result.eval}\n   Value: ${result.result}`);
+                channel!.appendLine(`- Object: ${result.path}\n   Value: ${result.result}`);
             });
             channel?.appendLine(Constants.outputDivider);
             channel?.appendLine(`Search complete. ${this.results?.length} ${(this.results.length === 1) ? "result" : "results"} found.`);

@@ -1,3 +1,5 @@
+import { CommentThreadCollapsibleState } from "vscode";
+
 export class StackFrameTracker {
     private stackFrames: Array<any> | undefined;
 
@@ -44,11 +46,17 @@ export class Variable {
 
     public variablesReference: number = -1;
     public depthFoundAt: number = 1;
+    public nameEntries: Array<string> = new Array<string>();
 
-    constructor(variablesReferenceIn: number, priorDepthIn: number | undefined = undefined) {
+    constructor(variablesReferenceIn: number, priorDepthIn: number | undefined = undefined, 
+        previousScope: Array<string> | undefined = undefined) {
         this.variablesReference = variablesReferenceIn;
         if (priorDepthIn !== undefined) {
             this.depthFoundAt += priorDepthIn;
+        }
+        if (previousScope !== undefined) {
+            // shallow copy old reference
+            this.nameEntries = previousScope.slice();
         }
     }
 }
@@ -57,10 +65,12 @@ export class SearchResult {
 	public variablesReference: number = -1;
     public result: string = '';
     public eval: string = '';
-    constructor(variablesReferenceIn: number, resultIn: string, evalIn: string) {
+    public path: string = '';
+    constructor(variablesReferenceIn: number, resultIn: string, evalIn: string, pathIn: string) {
 		this.variablesReference = variablesReferenceIn;
         this.result = resultIn;
         this.eval = evalIn;
+        this.path = pathIn;
     }
 }
 

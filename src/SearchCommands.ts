@@ -30,6 +30,7 @@ export namespace SearchCommands {
             let items: Array<any> = currentThreads.map((threadInfo) => {
                 return {
                     label: `${threadInfo.id}: ${threadInfo.name}`,
+                    threadId: threadInfo.id,
                     description: ``,
                     command: `${threadInfo.id}`,
                 };
@@ -70,6 +71,8 @@ export namespace SearchCommands {
                 let items = frames.map((frame: any) => {
                     let res = {
                         label: `Stack Frame ${i.toString()}: ${frame.name}${(i === 0) ? " (top) " : ""}`,
+                        number: i,
+                        name: frame.name,
                         description: ``,
                         command: frame.id,
                     };
