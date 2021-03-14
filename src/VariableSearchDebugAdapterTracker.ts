@@ -236,11 +236,14 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     //#endregion
 
     //#region 
+    public static selectedSearchType: string | undefined = undefined;
+    //#endregion
+
+    //#region 
     
     public static resetParameters() {
        SearchCommands.resetParameters(); 
     }
-
     //#endregion
 
 }

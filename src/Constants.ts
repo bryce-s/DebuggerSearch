@@ -22,10 +22,17 @@ export default class Constants {
     public static readonly outputDivider = '-----------------';
 
     // Scope types:
-    public static readonly allScopes = "All";
+    public static readonly allScopes: string = "All";
 
     // Variables reference types
-    public static readonly noChildren = 0;
+    public static readonly noChildren: number = 0;
+
+    // Search types
+    public static readonly containsDefault: string = "Contains (Default Search Type)";
+    public static readonly contains: string = "Contains";
+    public static readonly regex: string = "Regex";
+    public static readonly exactMatch: string = "Exact Match";
+    
 
 }
 

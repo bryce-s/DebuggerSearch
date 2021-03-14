@@ -5,9 +5,9 @@ import { Scope, ThreadTracker, Variable, VariableSearchLogger } from './Debugger
 import { parse, resolve } from 'path';
 import { rejects } from 'assert';
 import { clear } from 'console';
+import { Z_ASCII } from 'node:zlib';
 
 export namespace SearchCommands {
-
 
     export function debuggerPaused(): boolean {
         if (vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused) {
@@ -46,6 +46,7 @@ export namespace SearchCommands {
             }
         }
     }
+
 
     export async function setFrame(message: string = "Choose a stack frame..."): Promise<void> {
         if (debuggerPaused()) {
@@ -159,9 +160,27 @@ export namespace SearchCommands {
         }
     }
 
+    export async function setSearchType(): Promise<void> {
+        const choice = await vscode.window.showQuickPick(
+            [Constants.containsDefault, Constants.regex, Constants.exactMatch],
+            {
+                placeHolder: "Select search type...",
+                ignoreFocusOut: true
+            }
+        );
+        if (choice !== undefined) {
+            VariableSearchDebugAdapterTracker.selectedSearchType = choice;
+        } else {
+            const message: string = "Failed to set a search type!";
+            vscode.window.showErrorMessage(message);
+            return Promise.reject(message);
+        }
+    }
+
     export function resetParameters(): void {
         clearThreadsAndFrame();
         resetSearchDepth();
+        VariableSearchDebugAdapterTracker.selectedSearchType = undefined;
     }
 
 

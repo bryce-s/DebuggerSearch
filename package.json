@@ -56,6 +56,11 @@
 				"command": "variableSearch.setScope",
 				"category": "VariableSearch",
 				"title": "Set Scope for Search"
+			},
+			{
+				"command": "variableSearch.setSearchType",
+				"category": "VariableSearch",
+				"title": "Set Search Type"
 			}
 		]
 	},

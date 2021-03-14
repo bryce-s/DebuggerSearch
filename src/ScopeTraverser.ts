@@ -40,6 +40,22 @@ export default class ScopeTraverser implements VariableTracker {
         return false;
     };
 
+    searchExactMatch = (s: string, term: string): boolean => {
+        return s === term || `'${s}'` === term;
+    };
+
+
+    private getActiveSearchFunction(): any {
+        const searchType: string | undefined = VariableSearchDebugAdapterTracker.selectedSearchType;
+        if (searchType === undefined || searchType === Constants.contains) {
+            return this.searchContains;
+        }
+        if (searchType === Constants.regex) {
+            return this.regexSearchContains;
+        }
+        return this.searchExactMatch;
+    }
+
     public addVariables(v: Array<Variable>, requestSeq: number) : void {
         let variableReference: number | undefined = this.openRequests.get(requestSeq);
         this.openRequests.delete(requestSeq);
@@ -102,6 +118,7 @@ export default class ScopeTraverser implements VariableTracker {
                : VariableSearchDebugAdapterTracker.selectedScope.name
             } `);
             channel.appendLine(`At depth:        ${depth}`);
+            channel.appendLine(`With rules: ${VariableSearchDebugAdapterTracker.selectedSearchType || Constants.contains}`);
             channel.appendLine(Constants.outputDivider);
         }
     }
@@ -124,7 +141,7 @@ export default class ScopeTraverser implements VariableTracker {
             let scopes: Array<Scope> = this.scopes; 
             let startingVariables = scopes.map((s) => new Variable(s.variablesReference));
             this.dfsStack.push(...startingVariables);
-            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains : this.searchContains);
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, this.getActiveSearchFunction);
             if (bailOut) {
                 return;
             }
@@ -144,7 +161,7 @@ export default class ScopeTraverser implements VariableTracker {
             }
 
             this.dfsStack.push(variable);
-            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains : this.searchContains);
+            let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, this.getActiveSearchFunction());
             if (bailOut) {
                 return;
             }     
@@ -157,7 +174,7 @@ export default class ScopeTraverser implements VariableTracker {
     }
 
     public resumeSearch() {
-        this.traverseVariableTreeIterative(this.depthToSearch, (this.searchWithRegex) ? this.regexSearchContains: this.searchContains);
+        this.traverseVariableTreeIterative(this.depthToSearch, this.getActiveSearchFunction());
     }
 
     // comp: do we want to regex? or just check if contains, etc.
@@ -194,7 +211,7 @@ export default class ScopeTraverser implements VariableTracker {
                 this.getVariableContents(referenceNumber);
                 this.dfsStack.push(activeVariable);
                 return true;
-            }
+            } 
 
             // good to go
             this.visited.add(referenceNumber);
@@ -212,7 +229,9 @@ export default class ScopeTraverser implements VariableTracker {
 
                 const pathHere: Array<string> = activeVariable.nameEntries?.concat(info.name);
 
-                if (info.variableReference !== Constants.noChildren && !this.visited.has(info.variableReference)
+                // we can have the same object pointed to from other spots and we still want to
+                // return it, though...
+                if (info.variableReference !== Constants.noChildren // && !this.visited.has(info.variableReference)
                     && (activeVariable.depthFoundAt + 1) <= depth) {
                     this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt, 
                                        pathHere));
@@ -221,8 +240,10 @@ export default class ScopeTraverser implements VariableTracker {
 
                 const variablePath: string = pathHere.join('.');
 
+                this.logger.writeLog(variablePath);
+
                 if ((checkString(info.evaluateName || '', this.term) || checkString(info.name || '', this.term) 
-                    || checkString(info.value || '', this.term)) && info.evaluateName !== undefined) {
+                    || checkString(info.value || '', this.term)) && variablePath !== undefined) {
 				    let resultsFoundBeforeAdd: number = this.foundResults.size;
 					this.foundResults.add(variablePath);
 				    if (resultsFoundBeforeAdd !== this.foundResults.size) {
