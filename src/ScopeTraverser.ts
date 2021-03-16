@@ -37,13 +37,18 @@ export default class ScopeTraverser implements VariableTracker {
     };
 
     regexSearchContains = (sWithRegex: string, term: string) => {
-        return false;
+        return sWithRegex.match(term) !== null;
     };
 
     searchExactMatch = (s: string, term: string): boolean => {
-        return s === term || `'${s}'` === term;
+        if (s.length >= 3) {
+            return s === term || (
+                Constants.quoteTypes.includes(s[0]) && Constants.quoteTypes.includes(s[s.length-1]) 
+            &&  s.slice(1,s.length-1) === `${term}`
+            );
+        }
+        return s === term;
     };
-
 
     private getActiveSearchFunction(): any {
         const searchType: string | undefined = VariableSearchDebugAdapterTracker.selectedSearchType;
@@ -117,8 +122,8 @@ export default class ScopeTraverser implements VariableTracker {
                VariableSearchDebugAdapterTracker.selectedScope === Constants.allScopes ? "All Scopes" 
                : VariableSearchDebugAdapterTracker.selectedScope.name
             } `);
-            channel.appendLine(`At depth:        ${depth}`);
-            channel.appendLine(`With rules: ${VariableSearchDebugAdapterTracker.selectedSearchType || Constants.contains}`);
+            channel.appendLine(`At depth:        ${depth}${depth <= 3 ? "" : "(this may take some time)"}`);
+            channel.appendLine(`Search type:     ${VariableSearchDebugAdapterTracker.selectedSearchType || Constants.contains}`);
             channel.appendLine(Constants.outputDivider);
         }
     }
@@ -242,7 +247,8 @@ export default class ScopeTraverser implements VariableTracker {
 
                 this.logger.writeLog(variablePath);
 
-                if ((checkString(info.evaluateName || '', this.term) || checkString(info.name || '', this.term) 
+                // evaluateName is for languages that can be REPLd only
+                if ((checkString(info.name || '', this.term) 
                     || checkString(info.value || '', this.term)) && variablePath !== undefined) {
 				    let resultsFoundBeforeAdd: number = this.foundResults.size;
 					this.foundResults.add(variablePath);

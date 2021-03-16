@@ -160,6 +160,12 @@ export namespace SearchCommands {
         }
     }
 
+    export async function setSearchTypeIfNeeded(): Promise<void> {
+        if (VariableSearchDebugAdapterTracker.selectedSearchType === undefined) {
+            await setSearchType();
+        }
+    }
+
     export async function setSearchType(): Promise<void> {
         const choice = await vscode.window.showQuickPick(
             [Constants.containsDefault, Constants.regex, Constants.exactMatch],
@@ -177,10 +183,14 @@ export namespace SearchCommands {
         }
     }
 
+    function clearSearchType() {
+        VariableSearchDebugAdapterTracker.selectedSearchType = undefined;
+    }
+
     export function resetParameters(): void {
         clearThreadsAndFrame();
         resetSearchDepth();
-        VariableSearchDebugAdapterTracker.selectedSearchType = undefined;
+        clearSearchType();
     }
 
 
@@ -215,6 +225,7 @@ export namespace SearchCommands {
         if (debuggerPaused()) {
 
             await setFramesAndThreadsIfNeeded();
+            await setSearchTypeIfNeeded();
 
             let frameTargets = VariableSearchDebugAdapterTracker.selectedFrames;
             let searchTerm: string = '';
@@ -237,8 +248,7 @@ export namespace SearchCommands {
             }
 
             if (termAndScopes.some((result: any) => result === Constants.reset)) {
-                clearThreadsAndFrame();
-                clearDepth();
+                resetParameters();
                 searchForTerm();
                 return;
             }

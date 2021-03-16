@@ -32,6 +32,9 @@ export default class Constants {
     public static readonly contains: string = "Contains";
     public static readonly regex: string = "Regex";
     public static readonly exactMatch: string = "Exact Match";
+
+    // quote types
+    public static readonly quoteTypes: Array<string> = ["'", '"', '`'];
     
 
 }
