@@ -195,7 +195,7 @@ export default class ScopeTraverser implements VariableTracker {
     // returns: should we bail out?
     private traverseVariableTreeIterative(depth: number, checkString: Function): boolean {
 
-        if (!SearchCommands.debuggerPaused()) {
+        if (!SearchCommands.debuggerPaused() || !this.searchInProgress) {
             this.printSearchCancelled(VariableSearchDebugAdapterTracker.outputChannel);
             return true;
         }
@@ -276,6 +276,12 @@ export default class ScopeTraverser implements VariableTracker {
             this.printResultsToConsole(this.results, outputChannel);
             this.openOutputWindow(outputChannel);
         }
+    }
+
+    public cancelSearch() {
+        this.searchInProgress = false;
+        let channel = VariableSearchDebugAdapterTracker.outputChannel;
+        this.printSearchCancelled(channel);
     }
 
     private printSearchCancelled(channel: vscode.OutputChannel | undefined): void {

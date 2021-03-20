@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { Variable, VariableInfo, Scope } from './DebuggerObjectRepresentations';
 
 export default interface VariableTracker {
@@ -18,6 +19,7 @@ export default interface VariableTracker {
     addScope(s: Scope): void;
 
 
+    cancelSearch(): void;
 
     resumeSearch(): void;
 
