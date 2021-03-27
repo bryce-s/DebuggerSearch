@@ -296,6 +296,7 @@ export default class ScopeTraverser implements VariableTracker {
                 channel!.appendLine(`Results:`);
             }
             results.forEach(result => {
+                VariableSearchDebugAdapterTracker.refreshTreeView(result);
                 channel!.appendLine(`- Object: ${result.path}\n   Value: ${result.result}`);
             });
             channel?.appendLine(Constants.outputDivider);
@@ -331,3 +332,4 @@ export default class ScopeTraverser implements VariableTracker {
         this.variableMapping.set(s.variablesReference, new Array<Variable>());
     }
 }
+ 

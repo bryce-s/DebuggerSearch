@@ -61,8 +61,34 @@
 				"command": "variableSearch.setSearchType",
 				"category": "VariableSearch",
 				"title": "Set Search Type"
-			}
-		]
+			},
+			{
+                "command": "variableSearch.searchForTermFromTree",
+                "title": "Search for Term",
+                "icon": {
+                    "light": "resources/light/search.svg",
+                    "dark": "resources/dark/search.svg"
+                }
+            }
+		],
+		"views": {
+			"debug": [
+				{
+					"id": "variablesSearch.view",
+					"name": "Advanced Variables Search"
+				}
+			]
+		},
+		"menus": {
+            "view/title": [
+                {
+                    "command": "variableSearch.searchForTermFromTree",
+                    "when": "view == variablesSearch.view",
+                    "group": "navigation"
+                }
+      ]
+    }
+
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

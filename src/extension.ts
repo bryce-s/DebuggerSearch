@@ -13,6 +13,7 @@ import  Constants from './Constants';
 import VariableTracker from './VariableTracker';
 import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
 import { SearchCommands } from './SearchCommands';
+import DebuggerSearchTreeProvider from './DebuggerSearchTreeProvider';
 
 
 // some kind of testcase
@@ -54,8 +55,13 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("variableSearch.setSearchType", SearchCommands.setSearchType)
     );
+    context.subscriptions.push(
+        vscode.commands.registerCommand("variableSearch.searchForTermFromTree", SearchCommands.searchForTermFromTree)
+    );
 
     VariableSearchDebugAdapterTracker.outputChannel = vscode.window.createOutputChannel("Debugger Search");
+
+    vscode.window.registerTreeDataProvider('variablesSearch.view', new DebuggerSearchTreeProvider());
 
 }
 

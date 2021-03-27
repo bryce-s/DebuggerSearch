@@ -1,10 +1,11 @@
 import { DebugAdapterTracker, DebugAdapterTrackerFactory,  } from 'vscode';
 import Constants from './Constants';
 import * as vscode from 'vscode';
-import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope, VariableSearchLogger } from './DebuggerObjectRepresentations';
+import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope, VariableSearchLogger, SearchResult } from './DebuggerObjectRepresentations';
 import VariableTracker from './VariableTracker';
 import ScopeTraverser from './ScopeTraverser';
 import { SearchCommands } from './SearchCommands';
+import DebuggerSearchTreeProvider from './DebuggerSearchTreeProvider';
 
 
 export default class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
@@ -15,6 +16,10 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     public static debuggerPaused: boolean = false;
 
     public static outputChannel: vscode.OutputChannel | undefined = undefined;
+
+    public static refreshTreeView(result: SearchResult | undefined = undefined): void {
+        DebuggerSearchTreeProvider.refreshTreeView(result);
+    }
     
     constructor() {
 

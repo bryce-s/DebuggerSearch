@@ -221,6 +221,11 @@ export namespace SearchCommands {
         }
     }
 
+    export async function searchForTermFromTree() {
+       await searchForTermFromTree(); 
+    }
+
+
     export async function searchForTerm(): Promise<void> {
         if (debuggerPaused()) {
 
