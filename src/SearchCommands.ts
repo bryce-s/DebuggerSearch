@@ -222,7 +222,7 @@ export namespace SearchCommands {
     }
 
     export async function searchForTermFromTree() {
-       await searchForTermFromTree(); 
+       await searchForTerm(); 
     }
 
 

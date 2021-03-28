@@ -1,18 +1,26 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { stat } from 'node:fs';
 
 export default class SearchResultTreeItem extends vscode.TreeItem {
 
 
-    public readonly scope: string;
-    public readonly value: string;
+    public readonly scope: string = '';
+    public readonly value: string = '';
+    public readonly fullPath: string = '';
 
-    constructor(scope: string, value: string) {
-        super("bryce", undefined );
+    constructor(scope: string, 
+        value: string | undefined = undefined,
+        fullPath: string | undefined = undefined,
+        state: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed) {
+        super(scope, state);
         this.scope = scope;
-        this.value = value;
+        if (value !== undefined) {
+            this.value = value;
+        }
+        this.fullPath = fullPath || '';
         this.tooltip = scope;
-        this.description = "this is our desc";
+        this.description = this.value;
     }
 
     iconPath = {

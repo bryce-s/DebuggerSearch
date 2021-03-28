@@ -14,6 +14,7 @@ import VariableTracker from './VariableTracker';
 import VariableSearchDebugAdapterTracker from './VariableSearchDebugAdapterTracker';
 import { SearchCommands } from './SearchCommands';
 import DebuggerSearchTreeProvider from './DebuggerSearchTreeProvider';
+import SearchResultTreeItem from './SearchResultTreeItem';
 
 
 // some kind of testcase
@@ -24,9 +25,13 @@ import DebuggerSearchTreeProvider from './DebuggerSearchTreeProvider';
 // should only allocate on use./
 // commands to disable and enable
 
+function getDebugSearchTreeProvider() {
+}
 
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
+
+    const debuggerSearchTreeProvider = new DebuggerSearchTreeProvider();
 
     // lets us dispose of the listener when it's done
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
@@ -58,10 +63,16 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("variableSearch.searchForTermFromTree", SearchCommands.searchForTermFromTree)
     );
+    context.subscriptions.push(
+        vscode.commands.registerCommand("variableSearch.refreshSearchTree", 
+        async (item: SearchResultTreeItem[] | undefined) => { 
+            debuggerSearchTreeProvider.refreshTreeView(item); 
+        })
+    );
 
     VariableSearchDebugAdapterTracker.outputChannel = vscode.window.createOutputChannel("Debugger Search");
 
-    vscode.window.registerTreeDataProvider('variablesSearch.view', new DebuggerSearchTreeProvider());
+    vscode.window.registerTreeDataProvider('variablesSearch.view', debuggerSearchTreeProvider);
 
 }
 

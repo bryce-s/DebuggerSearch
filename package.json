@@ -69,6 +69,15 @@
                     "light": "resources/light/search.svg",
                     "dark": "resources/dark/search.svg"
                 }
+            },
+			{
+                "command": "variableSearch.refreshSearchTree",
+                "title": "Refresh",
+				"enablement": "false",
+                "icon": {
+                    "light": "resources/light/refresh.svg",
+                    "dark": "resources/dark/refresh.svg"
+                }
             }
 		],
 		"views": {

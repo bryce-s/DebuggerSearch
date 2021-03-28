@@ -52,7 +52,7 @@ export default class ScopeTraverser implements VariableTracker {
 
     private getActiveSearchFunction(): any {
         const searchType: string | undefined = VariableSearchDebugAdapterTracker.selectedSearchType;
-        if (searchType === undefined || searchType === Constants.contains) {
+        if (searchType === undefined || searchType === Constants.contains || searchType === Constants.containsDefault) {
             return this.searchContains;
         }
         if (searchType === Constants.regex) {
@@ -296,9 +296,9 @@ export default class ScopeTraverser implements VariableTracker {
                 channel!.appendLine(`Results:`);
             }
             results.forEach(result => {
-                VariableSearchDebugAdapterTracker.refreshTreeView(result);
                 channel!.appendLine(`- Object: ${result.path}\n   Value: ${result.result}`);
             });
+            VariableSearchDebugAdapterTracker.refreshTreeView(results);
             channel?.appendLine(Constants.outputDivider);
             channel?.appendLine(`Search complete. ${this.results?.length} ${(this.results.length === 1) ? "result" : "results"} found.`);
             channel?.appendLine(Constants.outputDivider);

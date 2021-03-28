@@ -6,6 +6,8 @@ import VariableTracker from './VariableTracker';
 import ScopeTraverser from './ScopeTraverser';
 import { SearchCommands } from './SearchCommands';
 import DebuggerSearchTreeProvider from './DebuggerSearchTreeProvider';
+import SearchResultTreeItem from './SearchResultTreeItem';
+import { fail } from 'node:assert';
 
 
 export default class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
@@ -17,8 +19,17 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
 
     public static outputChannel: vscode.OutputChannel | undefined = undefined;
 
-    public static refreshTreeView(result: SearchResult | undefined = undefined): void {
-        DebuggerSearchTreeProvider.refreshTreeView(result);
+    public static refreshTreeView(results: SearchResult[] | undefined = undefined): void {
+        if (results) {
+            let resultsAsTreeItems: Array<SearchResultTreeItem> = results.map((result) => new SearchResultTreeItem(result.path, result.result));
+            vscode.commands.executeCommand("variableSearch.refreshSearchTree", resultsAsTreeItems).then(
+                (success) => {
+                 },
+                 (failure) => {
+                     console.log(failure);
+                 }
+            );
+        }
     }
     
     constructor() {
