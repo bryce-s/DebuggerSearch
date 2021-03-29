@@ -69,8 +69,8 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
         return element;
     }
 
-    getValue(element: SearchResultTreeItem, pathToHere: string): Thenable<SearchResultTreeItem[]> {
-        const value = this.pathToValue.get(element.scope);
+    getValue(pathToHere: string): Thenable<SearchResultTreeItem[]> {
+        const value = this.pathToValue.get(pathToHere);
         return Promise.resolve([new SearchResultTreeItem(value || '', undefined, pathToHere, vscode.TreeItemCollapsibleState.None)]);
     } 
     // Get the children of element or root if no element is passed.
@@ -84,15 +84,20 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
         }
 
         let elementChildren = [];
-        const scopePath = element.scope.split('.');
 
         const pathToHere: string = element.fullPath;
+
+        // we can have strings in values, though; this splits by them
+        // how can we check if '' is wrapping??
+        // see: sys.path_importer_carche_.'users/brycesmith/. ***' 
+        const scopePathStr = `${(pathToHere === '') ? '' : pathToHere + '.'}${element.scope}`;
+        const scopePath = scopePathStr.split('.');
 
         let activeMap = this.scopesToSearchResults;
         for (let i = 0; i < scopePath.length; i++) {
             const path = scopePath[i];
             if (!activeMap.has(path)) {
-                return this.getValue(element, pathToHere + "." + path);
+                return this.getValue(scopePathStr);
             }
             activeMap = activeMap.get(path);
         }
@@ -100,7 +105,7 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
         if (activeMap === undefined || activeMap.size === 0) {
             // this is a value node
             // path to here shouldn't matter
-            return this.getValue(element, pathToHere);
+            return this.getValue(scopePathStr);
         } else {
             let children: Array<any> = Array<any>();
             // -_-
@@ -108,7 +113,7 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
                 children.push(key);
             }
             children.sort();
-            return Promise.resolve(children.map((child) => new SearchResultTreeItem(child)));
+            return Promise.resolve(children.map((child) => new SearchResultTreeItem(child, undefined, scopePathStr, vscode.TreeItemCollapsibleState.Collapsed)));
         }
     }
 
