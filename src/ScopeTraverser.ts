@@ -253,7 +253,7 @@ export default class ScopeTraverser implements VariableTracker {
 				    let resultsFoundBeforeAdd: number = this.foundResults.size;
 					this.foundResults.add(variablePath);
 				    if (resultsFoundBeforeAdd !== this.foundResults.size) {
-                    	this.results.push(new SearchResult(info.variableReference, info.value, info.evaluateName, variablePath));
+                    	this.results.push(new SearchResult(info.variableReference, info.value, info.evaluateName, variablePath, pathHere));
 					}
                 }
             });

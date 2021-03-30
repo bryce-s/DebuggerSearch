@@ -66,11 +66,13 @@ export class SearchResult {
     public result: string = '';
     public eval: string = '';
     public path: string = '';
-    constructor(variablesReferenceIn: number, resultIn: string, evalIn: string, pathIn: string) {
+    public pathAsArray: Array<string> = new Array<string>();
+    constructor(variablesReferenceIn: number, resultIn: string, evalIn: string, pathIn: string, pathAsArrayIn: Array<string>) {
 		this.variablesReference = variablesReferenceIn;
         this.result = resultIn;
         this.eval = evalIn;
         this.path = pathIn;
+        this.pathAsArray = pathAsArrayIn;
     }
 }
 

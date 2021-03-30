@@ -8,10 +8,12 @@ export default class SearchResultTreeItem extends vscode.TreeItem {
     public readonly scope: string = '';
     public readonly value: string = '';
     public readonly fullPath: string = '';
+    public readonly pathAsArray: Array<string> | undefined = undefined;
 
     constructor(scope: string, 
         value: string | undefined = undefined,
         fullPath: string | undefined = undefined,
+        pathAsArray: Array<string> | undefined = undefined,
         state: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed) {
         super(scope, state);
         this.scope = scope;
@@ -21,6 +23,7 @@ export default class SearchResultTreeItem extends vscode.TreeItem {
         this.fullPath = fullPath || '';
         this.tooltip = scope;
         this.description = this.value;
+        this.pathAsArray = pathAsArray;
     }
 
     iconPath = {

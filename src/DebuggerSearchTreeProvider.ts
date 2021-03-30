@@ -43,7 +43,10 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
         console.log(results);
         results.forEach(result => {
             let scopePath = result.scope;
-            let scopes: Array<string> = scopePath.split('.');
+            if (result.pathAsArray === undefined) {
+                throw Error("can't have a result without a defined path.");
+            }
+            let scopes: Array<string> = result.pathAsArray;
 
             let activeMap = this.scopesToSearchResults;
             for (let i = 0; i < scopes.length; i ++) {
@@ -71,7 +74,7 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
 
     getValue(pathToHere: string): Thenable<SearchResultTreeItem[]> {
         const value = this.pathToValue.get(pathToHere);
-        return Promise.resolve([new SearchResultTreeItem(value || '', undefined, pathToHere, vscode.TreeItemCollapsibleState.None)]);
+        return Promise.resolve([new SearchResultTreeItem(value || '', undefined, pathToHere, undefined, vscode.TreeItemCollapsibleState.None)]);
     } 
     // Get the children of element or root if no element is passed.
     // @param element — The element from which the provider gets children. Can be undefined.
@@ -85,19 +88,21 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
 
         let elementChildren = [];
 
-        const pathToHere: string = element.fullPath;
+        const pathToHereArr: Array<string> = element.pathAsArray || new Array<string>();
+        const pathToHere = element.fullPath;
 
         // we can have strings in values, though; this splits by them
         // how can we check if '' is wrapping??
         // see: sys.path_importer_carche_.'users/brycesmith/. ***' 
+        // also consider; numeric values
         const scopePathStr = `${(pathToHere === '') ? '' : pathToHere + '.'}${element.scope}`;
-        const scopePath = scopePathStr.split('.');
+        const scopePath = pathToHereArr.concat(element.scope);
 
         let activeMap = this.scopesToSearchResults;
         for (let i = 0; i < scopePath.length; i++) {
             const path = scopePath[i];
             if (!activeMap.has(path)) {
-                return this.getValue(scopePathStr);
+                return this.getValue(scopePath.join('.'));
             }
             activeMap = activeMap.get(path);
         }
@@ -113,7 +118,7 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
                 children.push(key);
             }
             children.sort();
-            return Promise.resolve(children.map((child) => new SearchResultTreeItem(child, undefined, scopePathStr, vscode.TreeItemCollapsibleState.Collapsed)));
+            return Promise.resolve(children.map((child) => new SearchResultTreeItem(child, undefined, scopePathStr, scopePath, vscode.TreeItemCollapsibleState.Collapsed)));
         }
     }
 

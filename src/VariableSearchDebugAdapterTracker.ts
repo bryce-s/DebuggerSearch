@@ -21,7 +21,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
 
     public static refreshTreeView(results: SearchResult[] | undefined = undefined): void {
         if (results) {
-            let resultsAsTreeItems: Array<SearchResultTreeItem> = results.map((result) => new SearchResultTreeItem(result.path, result.result));
+            let resultsAsTreeItems: Array<SearchResultTreeItem> = results.map((result) => new SearchResultTreeItem(result.path, result.result, undefined, result.pathAsArray));
             vscode.commands.executeCommand("variableSearch.refreshSearchTree", resultsAsTreeItems).then(
                 (success) => {
                  },
