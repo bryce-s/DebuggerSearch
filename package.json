@@ -1,9 +1,16 @@
 {
 	"name": "debuggersearch",
 	"displayName": "DebuggerSearch",
-	"description": "",
-	"version": "0.8.0",
+	"description": "Search the paused debugger for a value",
 	"publisher": "BryceSmith",
+	"author": {
+		"name": "Bryce Smith",
+		"url": "https://github.com/bryce-s/"
+	},
+	"version": "0.8.0",
+	"icon": "resources/debuggerSearch.png",
+	"homepage": "https://github.com/bryce-s/DebuggerSearch",
+	"badges": [],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/bryce-s/DebuggerSearch.git"
