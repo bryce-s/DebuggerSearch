@@ -67,6 +67,9 @@ export function activate(context: vscode.ExtensionContext) {
             debuggerSearchTreeProvider.refreshTreeView(item); 
         })
     );
+    context.subscriptions.push(
+        vscode.commands.registerCommand("variableSearch.cancelSearch", SearchCommands.cancelSearch)
+    );
 
     VariableSearchDebugAdapterTracker.outputChannel = vscode.window.createOutputChannel("Debugger Search");
 

@@ -93,6 +93,12 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         }
     }
 
+    public static cancelSearch(): void {
+        let reference = VariableSearchDebugAdapterTracker.trackerReference;
+        if (VariableSearchDebugAdapterTracker.trackerReference !== undefined && reference?.searchInProgress) {
+            reference?.cancelSearch();
+        }
+    }
 
     private debuggerContinuedOrExited(): void {
         let reference = VariableSearchDebugAdapterTracker.trackerReference;

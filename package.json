@@ -83,6 +83,14 @@
                 }
             },
 			{
+                "command": "variableSearch.cancelSearch",
+                "title": "Cancel Search",
+                "icon": {
+                    "light": "resources/light/search-stop.svg",
+                    "dark": "resources/dark/search-stop.svg"
+                }
+            },
+			{
                 "command": "variableSearch.refreshSearchTree",
                 "title": "Refresh",
 				"enablement": "false",
@@ -104,6 +112,11 @@
             "view/title": [
                 {
                     "command": "variableSearch.searchForTermFromTree",
+                    "when": "view == variablesSearch.view",
+                    "group": "navigation"
+                },
+				{
+                    "command": "variableSearch.cancelSearch",
                     "when": "view == variablesSearch.view",
                     "group": "navigation"
                 }

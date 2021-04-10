@@ -9,6 +9,13 @@ import { Z_ASCII } from 'node:zlib';
 
 export namespace SearchCommands {
 
+    export function cancelSearch(): void {
+        if (debuggerPaused()) {
+            VariableSearchDebugAdapterTracker.cancelSearch();
+        }
+    }
+
+
     export function debuggerPaused(): boolean {
         if (vscode.debug.activeDebugSession !== undefined && VariableSearchDebugAdapterTracker.debuggerPaused) {
             return true;
