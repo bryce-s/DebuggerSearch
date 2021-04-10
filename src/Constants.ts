@@ -10,7 +10,7 @@ export default class Constants {
     public static readonly continued: string = 'continued';
     public static readonly exited: string = 'exited';
     public static readonly terminated: string = 'terminated';
-    
+
     // commands:
     public static readonly scopes: string = 'scopes';
     public static readonly variables: string = 'variables';
@@ -35,7 +35,8 @@ export default class Constants {
 
     // quote types
     public static readonly quoteTypes: Array<string> = ["'", '"', '`'];
-    
+
+    public static readonly debuggerSearchLoggingEnabled: boolean = false;
 
 }
 

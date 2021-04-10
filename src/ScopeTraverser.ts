@@ -20,13 +20,12 @@ export default class ScopeTraverser implements VariableTracker {
     private dfsStack: Array<Variable> = new Array<Variable>();
     private depthToSearch: number = 3;
 
-    // how to tell if extension is deployed?
-    private logger: VariableSearchLogger = new VariableSearchLogger( true );
+    private logger: VariableSearchLogger = new VariableSearchLogger(Constants.debuggerSearchLoggingEnabled);
 
     private term: string = '';
     private searchWithRegex: boolean = false;
 
-	private foundResults: Set<string> = new Set<string>();
+    private foundResults: Set<string> = new Set<string>();
     private results: Array<SearchResult> = new Array<SearchResult>();
 
     // public VariableTracker properties
@@ -43,8 +42,8 @@ export default class ScopeTraverser implements VariableTracker {
     searchExactMatch = (s: string, term: string): boolean => {
         if (s.length >= 3) {
             return s === term || (
-                Constants.quoteTypes.includes(s[0]) && Constants.quoteTypes.includes(s[s.length-1]) 
-            &&  s.slice(1,s.length-1) === `${term}`
+                Constants.quoteTypes.includes(s[0]) && Constants.quoteTypes.includes(s[s.length - 1])
+                && s.slice(1, s.length - 1) === `${term}`
             );
         }
         return s === term;
@@ -61,7 +60,7 @@ export default class ScopeTraverser implements VariableTracker {
         return this.searchExactMatch;
     }
 
-    public addVariables(v: Array<Variable>, requestSeq: number) : void {
+    public addVariables(v: Array<Variable>, requestSeq: number): void {
         let variableReference: number | undefined = this.openRequests.get(requestSeq);
         this.openRequests.delete(requestSeq);
 
@@ -72,7 +71,7 @@ export default class ScopeTraverser implements VariableTracker {
 
         let childNodes: Variable[] | undefined = this.variableMapping.get(variableReference);
         childNodes = childNodes?.concat(v);
-        this.variableMapping.set(variableReference, 
+        this.variableMapping.set(variableReference,
             (childNodes === undefined) ? new Array<Variable>().concat(v) : childNodes);
 
         childNodes?.forEach(child => this.activeVariablesReferences.add(child.variablesReference));
@@ -100,28 +99,27 @@ export default class ScopeTraverser implements VariableTracker {
         this.openRequests.set(seq, variableReference);
     }
 
-    private printSearchingMessage(term: string, depth: number, openChannel: boolean, clearChannel: boolean, 
-                                  channel: vscode.OutputChannel | undefined) {
+    private printSearchingMessage(term: string, depth: number, openChannel: boolean, clearChannel: boolean,
+        channel: vscode.OutputChannel | undefined) {
         if (channel !== undefined) {
             if (clearChannel) {
                 channel.clear();
             }
             if (openChannel) {
                 channel.show();
-            } 
+            }
             if (!clearChannel) {
                 channel.appendLine(Constants.outputDivider);
             }
 
             const selectedFrame = VariableSearchDebugAdapterTracker.selectedFrame;
-            
+
             channel.appendLine(`Searching for:   ${term}`);
             channel.appendLine(`In thread:       ${VariableSearchDebugAdapterTracker.selectedThread.label}`);
             channel.appendLine(`In stack frame:  ${selectedFrame.number}: ${selectedFrame.name}`);
-            channel.appendLine(`In scope:        ${
-               VariableSearchDebugAdapterTracker.selectedScope === Constants.allScopes ? "All Scopes" 
-               : VariableSearchDebugAdapterTracker.selectedScope.name
-            } `);
+            channel.appendLine(`In scope:        ${VariableSearchDebugAdapterTracker.selectedScope === Constants.allScopes ? "All Scopes"
+                    : VariableSearchDebugAdapterTracker.selectedScope.name
+                } `);
             channel.appendLine(`At depth:        ${depth}${depth <= 3 ? "" : "(this may take some time)"}`);
             channel.appendLine(`Search type:     ${VariableSearchDebugAdapterTracker.selectedSearchType || Constants.contains}`);
             channel.appendLine(Constants.outputDivider);
@@ -143,7 +141,7 @@ export default class ScopeTraverser implements VariableTracker {
         }
 
         if (scopeId === undefined) {
-            let scopes: Array<Scope> = this.scopes; 
+            let scopes: Array<Scope> = this.scopes;
             let startingVariables = scopes.map((s) => new Variable(s.variablesReference));
             this.dfsStack.push(...startingVariables);
             let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, this.getActiveSearchFunction);
@@ -156,9 +154,9 @@ export default class ScopeTraverser implements VariableTracker {
                 // error, not a valid scope
                 targetScope = this.scopes[0];
             }
-    
+
             this.logger.writeLog(`Searching in scope: ${targetScope}`);
-    
+
             let variable = new Variable(targetScope.variablesReference);
             if (variable === undefined) {
                 // error
@@ -169,9 +167,9 @@ export default class ScopeTraverser implements VariableTracker {
             let bailOut: boolean = this.traverseVariableTreeIterative(this.depthToSearch, this.getActiveSearchFunction());
             if (bailOut) {
                 return;
-            }     
+            }
         }
-        
+
 
         this.term = '';
         this.searchInProgress = false;
@@ -216,7 +214,7 @@ export default class ScopeTraverser implements VariableTracker {
                 this.getVariableContents(referenceNumber);
                 this.dfsStack.push(activeVariable);
                 return true;
-            } 
+            }
 
             // good to go
             this.visited.add(referenceNumber);
@@ -238,8 +236,8 @@ export default class ScopeTraverser implements VariableTracker {
                 // return it, though...
                 if (info.variableReference !== Constants.noChildren // && !this.visited.has(info.variableReference)
                     && (activeVariable.depthFoundAt + 1) <= depth) {
-                    this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt, 
-                                       pathHere));
+                    this.dfsStack.push(new Variable(info.variableReference, activeVariable.depthFoundAt,
+                        pathHere));
                     this.visited.add(info.variableReference);
                 }
 
@@ -248,13 +246,13 @@ export default class ScopeTraverser implements VariableTracker {
                 this.logger.writeLog(variablePath);
 
                 // evaluateName is for languages that can be REPLd only
-                if ((checkString(info.name || '', this.term) 
+                if ((checkString(info.name || '', this.term)
                     || checkString(info.value || '', this.term)) && variablePath !== undefined) {
-				    let resultsFoundBeforeAdd: number = this.foundResults.size;
-					this.foundResults.add(variablePath);
-				    if (resultsFoundBeforeAdd !== this.foundResults.size) {
-                    	this.results.push(new SearchResult(info.variableReference, info.value, info.evaluateName, variablePath, pathHere));
-					}
+                    let resultsFoundBeforeAdd: number = this.foundResults.size;
+                    this.foundResults.add(variablePath);
+                    if (resultsFoundBeforeAdd !== this.foundResults.size) {
+                        this.results.push(new SearchResult(info.variableReference, info.value, info.evaluateName, variablePath, pathHere));
+                    }
                 }
             });
         }
@@ -270,7 +268,7 @@ export default class ScopeTraverser implements VariableTracker {
             this.searchInProgress = false;
             this.searchWithRegex = false;
 
-            console.log(`results:`, this.results);
+            this.logger.writeLog(this.results);
 
             let outputChannel = VariableSearchDebugAdapterTracker.outputChannel;
             this.printResultsToConsole(this.results, outputChannel);
@@ -304,7 +302,7 @@ export default class ScopeTraverser implements VariableTracker {
             channel?.appendLine(Constants.outputDivider);
         }
     }
-    
+
     private openOutputWindow(console: vscode.OutputChannel | undefined) {
         if (console !== undefined) {
             console.show();
@@ -320,7 +318,7 @@ export default class ScopeTraverser implements VariableTracker {
                 vscode.window.showErrorMessage(message);
                 throw new Error(message);
             }
-            (this.logger.enabled ) ? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : ()=>{};
+            (this.logger.enabled) ? this.logger.writeLog(`Requesting variable info for variablesReference ${varRef}`) : () => { };
             // can't just resolve the promise; no way to bind it back:
             vscode.debug.activeDebugSession?.customRequest(Constants.variables, { variablesReference: varRef });
         }
@@ -332,4 +330,3 @@ export default class ScopeTraverser implements VariableTracker {
         this.variableMapping.set(s.variablesReference, new Array<Variable>());
     }
 }
- 

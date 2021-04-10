@@ -25,9 +25,4 @@ export default class SearchResultTreeItem extends vscode.TreeItem {
         this.description = this.value;
         this.pathAsArray = pathAsArray;
     }
-
-    // iconPath = {
-    //     light: path.join(_filename, '..', '..', 'resources', 'light', 'dependency.svg'),
-    //     dark: path.join(_filename, '..', '..', 'resources', 'dark', 'dependency.svg')
-    //   };
 }

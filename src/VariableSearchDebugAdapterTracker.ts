@@ -1,4 +1,4 @@
-import { DebugAdapterTracker, DebugAdapterTrackerFactory,  } from 'vscode';
+import { DebugAdapterTracker, DebugAdapterTrackerFactory, } from 'vscode';
 import Constants from './Constants';
 import * as vscode from 'vscode';
 import { ThreadTracker, StackFrameTracker, Variable, VariableInfo, Scope, VariableSearchLogger, SearchResult } from './DebuggerObjectRepresentations';
@@ -23,14 +23,16 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
             let resultsAsTreeItems: Array<SearchResultTreeItem> = results.map((result) => new SearchResultTreeItem(result.path, result.result, undefined, result.pathAsArray));
             vscode.commands.executeCommand("variableSearch.refreshSearchTree", resultsAsTreeItems).then(
                 (success) => {
-                 },
-                 (failure) => {
-                     console.log(failure);
-                 }
+                },
+                (failure) => {
+                    if (Constants.debuggerSearchLoggingEnabled) {
+                        console.log(failure);
+                    }
+                }
             );
         }
     }
-    
+
     constructor() {
 
         VariableSearchDebugAdapterTracker.generateNewTracker();
@@ -43,7 +45,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     public static generateNewTracker(): void {
         VariableSearchDebugAdapterTracker.trackerReference = new ScopeTraverser();
     }
-    
+
     onWillReceiveMessage(message: any) {
         // sending a message to the debug adapter
         if (message.command === Constants.variables) {
@@ -54,7 +56,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
 
     onDidSendMessage(message: any) {
         // recv message from debug adapter
-        
+
         // https://microsoft.github.io/debug-adapter-protocol/specification
         if (message.type === Constants.event) {
             this.handleEventRecv(message);
@@ -106,15 +108,17 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     handleVariablesUnderSearchRecv(message: any): void {
         if (message.success) {
             let variables = message.body.variables;
-        
+
             VariableSearchDebugAdapterTracker.trackerReference!.addVariableData(variables.map(
                 (x: any) => new VariableInfo(x.variablesReference, x.name, x.type, x.evaluateName, x.value)
-                ), message.request_seq);
+            ), message.request_seq);
 
             VariableSearchDebugAdapterTracker.trackerReference!.resumeSearch();
         } else {
-            console.log(`requesting variables failed`);
-            console.log(message);
+            if (Constants.debuggerSearchLoggingEnabled) {
+                console.log(`requesting variables failed`);
+                console.log(message);
+            }
         }
     }
 
@@ -122,18 +126,18 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         let variables = message.body.variables;
 
         let trackedVariables: Array<Variable> = new Array<Variable>();
-        variables.forEach((variable: any) =>  trackedVariables.push(new Variable(variable.variablesReference))); 
+        variables.forEach((variable: any) => trackedVariables.push(new Variable(variable.variablesReference)));
         trackedVariables = trackedVariables.filter((variable) => variable.variablesReference !== 0);
 
         VariableSearchDebugAdapterTracker.trackerReference!.addVariables(trackedVariables, message.request_seq);
     }
 
     handleScopesRecv(message: any): void {
-            // i think the only time this is called is when execution is paused?
-            // this should be the case, but we will want to defer doing work until a search is actually run.
+        // i think the only time this is called is when execution is paused?
+        // this should be the case, but we will want to defer doing work until a search is actually run.
         if (message.success) {
 
-       //     VariableSearchDebugAdapterTracker.generateNewTracker();
+            //     VariableSearchDebugAdapterTracker.generateNewTracker();
 
             message.body.scopes.forEach((s: any) => {
                 VariableSearchDebugAdapterTracker.trackerReference!.addScope(new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference));
@@ -143,13 +147,15 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     }
 
     handleStackTraceRecv(message: any) {
-            if (message.success) {
-                if (message.body.stackFrames.length === message.body.totalFrames) {
-                    // this is from all threads.
-                    
-                }
+        if (message.success) {
+            if (message.body.stackFrames.length === message.body.totalFrames) {
+                // this is from all threads.
+
             }
+        }
+        if (Constants.debuggerSearchLoggingEnabled) {
             console.log(`requested: ${message.body}`);
+        }
     }
 
     handleThreadsRecv(message: any): void {
@@ -162,12 +168,14 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
                     };
                 })
             );
-        } 
+        }
     }
 
 
     onError(error: Error) {
-        console.log("Error in communication with debug adapter:\n", error);
+        if (Constants.debuggerSearchLoggingEnabled) {
+            console.log("Error in communication with debug adapter:\n", error);
+        }
     }
 
     onExit(code: number, signal: string) {
@@ -203,7 +211,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     public static clearSelectedThreads(): void {
         VariableSearchDebugAdapterTracker._selectedThreads = undefined;
     }
-    
+
     //#endregion
 
 
@@ -228,7 +236,7 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     }
 
     public static clearSelectedFrames(): void {
-       VariableSearchDebugAdapterTracker._selectedFrames = undefined; 
+        VariableSearchDebugAdapterTracker._selectedFrames = undefined;
     }
 
     //#endregion
@@ -248,9 +256,9 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     //#endregion
 
     //#region 
-    
+
     public static resetParameters() {
-       SearchCommands.resetParameters(); 
+        SearchCommands.resetParameters();
     }
     //#endregion
 

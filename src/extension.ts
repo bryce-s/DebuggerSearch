@@ -25,9 +25,6 @@ import SearchResultTreeItem from './SearchResultTreeItem';
 // should only allocate on use./
 // commands to disable and enable
 
-function getDebugSearchTreeProvider() {
-}
-
 export function activate(context: vscode.ExtensionContext) {
     const trackerFactory = new VariableSearchDebugAdapterTrackerFactory();
 
@@ -36,6 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
     // lets us dispose of the listener when it's done
     context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory('*', trackerFactory));
 
+    // since this is an array we could just extend it?
     context.subscriptions.push(
 		vscode.commands.registerCommand("variableSearch.search", SearchCommands.searchCommand)
 	);
@@ -80,7 +78,7 @@ export function activate(context: vscode.ExtensionContext) {
 class VariableSearchDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {
     
     createDebugAdapterTracker(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterTracker> {
-        console.log("Creating new debug adapter tracker");
+        // console.log("Creating new debug adapter tracker");
         const tracker = new VariableSearchDebugAdapterTracker();
         return tracker;
     }

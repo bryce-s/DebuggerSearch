@@ -36,9 +36,9 @@ export namespace SearchCommands {
                 };
             });
             let threadChoice = await vscode.window.showQuickPick(items, {
-                   placeHolder: message,
-                   ignoreFocusOut: true
-                });
+                placeHolder: message,
+                ignoreFocusOut: true
+            });
             if (debuggerPaused() && threadChoice !== undefined) {
                 let targetThread: number = parseInt(threadChoice.command);
                 VariableSearchDebugAdapterTracker.selectedThread = threadChoice;
@@ -81,9 +81,9 @@ export namespace SearchCommands {
                     return res;
                 });
                 let frameChoice: any = await vscode.window.showQuickPick(items, {
-                        placeHolder: message,
-                        ignoreFocusOut: true
-                     });
+                    placeHolder: message,
+                    ignoreFocusOut: true
+                });
                 if (debuggerPaused() && frameChoice !== undefined) {
                     VariableSearchDebugAdapterTracker.selectedFrames.push(frameChoice.command);
                     VariableSearchDebugAdapterTracker.selectedFrame = frameChoice;
@@ -144,14 +144,14 @@ export namespace SearchCommands {
 
     // not dependent on having a running debug session.
     export async function setSearchDepth(): Promise<void> {
-        let candidates = Array.from(Array(10).keys()).filter(c => ![0,1].includes(c));;
-        const choice = await vscode.window.showQuickPick(candidates.map(c => c.toString()), 
-                      {
-                          placeHolder: "Select depth to search...",
-                          ignoreFocusOut: true
-                      });
+        let candidates = Array.from(Array(10).keys()).filter(c => ![0, 1].includes(c));;
+        const choice = await vscode.window.showQuickPick(candidates.map(c => c.toString()),
+            {
+                placeHolder: "Select depth to search...",
+                ignoreFocusOut: true
+            });
         if (choice !== undefined) {
-                VariableSearchDebugAdapterTracker.depth = parseInt(choice);
+            VariableSearchDebugAdapterTracker.depth = parseInt(choice);
         }
         else {
             const message: string = "Failed to select search depth!";
@@ -206,7 +206,7 @@ export namespace SearchCommands {
     }
 
     function clearDepth() {
-       VariableSearchDebugAdapterTracker.depth = undefined; 
+        VariableSearchDebugAdapterTracker.depth = undefined;
     }
 
     async function setFramesAndThreadsIfNeeded(): Promise<void> {
@@ -222,7 +222,7 @@ export namespace SearchCommands {
     }
 
     export async function searchForTermFromTree() {
-       await searchForTerm(); 
+        await searchForTerm();
     }
 
 
@@ -237,15 +237,14 @@ export namespace SearchCommands {
 
             let termAndScopes = await Promise.all(
                 [vscode.window.showInputBox(
-                    { 
-                        prompt: `Search in ${
-                            VariableSearchDebugAdapterTracker.selectedThread.label
-                        }, or reset parameters (${Constants.reset})`,
+                    {
+                        prompt: `Search in ${VariableSearchDebugAdapterTracker.selectedThread.label
+                            }, or reset parameters (${Constants.reset})`,
                         ignoreFocusOut: true
                     })].concat(
-                    frameTargets.map(async (frame: number) => {
-                        return vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
-                    }))
+                        frameTargets.map(async (frame: number) => {
+                            return vscode.debug.activeDebugSession?.customRequest(Constants.scopes, { frameId: frame });
+                        }))
             );
 
             if (termAndScopes.some((result: any) => result === undefined)) {
@@ -262,7 +261,7 @@ export namespace SearchCommands {
 
             termAndScopes.forEach((result: any) => {
                 if (typeof result === 'string') {
-                   searchTerm = result; 
+                    searchTerm = result;
                 } else {
                     // it's not undefined, so it's scopes object.
                     if (result === undefined) {
@@ -277,7 +276,7 @@ export namespace SearchCommands {
                             VariableSearchDebugAdapterTracker.trackerReference?.addScope(
                                 new Scope(s.expensive, s.name, s.presentationHint, s.variablesReference)
                             );
-                         });
+                        });
                     }
                     else {
                         VariableSearchDebugAdapterTracker.trackerReference?.addScope(
@@ -287,7 +286,7 @@ export namespace SearchCommands {
                 }
             });
 
-            const depth = (VariableSearchDebugAdapterTracker.depth !== undefined) ? VariableSearchDebugAdapterTracker.depth : 3 ; 
+            const depth = (VariableSearchDebugAdapterTracker.depth !== undefined) ? VariableSearchDebugAdapterTracker.depth : 3;
 
             VariableSearchDebugAdapterTracker.trackerReference?.searchTerm(searchTerm, undefined, false, depth);
         }
@@ -298,44 +297,44 @@ export namespace SearchCommands {
     export function searchCommand(): void {
         if (debuggerPaused()) {
             vscode.window.showInputBox(
-                { 
+                {
                     prompt: "Search for?",
                     ignoreFocusOut: true
-                 }).then(
-                (term: string | undefined) => {
-                    // success
-                    if (term === undefined) {
-                        return;
-                    }
-                    if (debuggerPaused()) {
-                        let currentThreads: Array<any> = VariableSearchDebugAdapterTracker.threadTracker.threads || new Array<any>();
-                        let options = currentThreads.map((threadInfo) => {
-                            return {
-                                label: `${threadInfo.id}: ${threadInfo.name}`,
-                                description: ``,
-                                command: `${threadInfo.id}`,
-                            };
-                        });
-                        vscode.window.showQuickPick(options, {
-                             canPickMany: false,
-                             ignoreFocusOut: true
+                }).then(
+                    (term: string | undefined) => {
+                        // success
+                        if (term === undefined) {
+                            return;
+                        }
+                        if (debuggerPaused()) {
+                            let currentThreads: Array<any> = VariableSearchDebugAdapterTracker.threadTracker.threads || new Array<any>();
+                            let options = currentThreads.map((threadInfo) => {
+                                return {
+                                    label: `${threadInfo.id}: ${threadInfo.name}`,
+                                    description: ``,
+                                    command: `${threadInfo.id}`,
+                                };
+                            });
+                            vscode.window.showQuickPick(options, {
+                                canPickMany: false,
+                                ignoreFocusOut: true
                             }).then((option: any) => {
-                            if (!option) {
-                                return;
-                            }
-                            if (!option.length) {
-                                option = new Array<any>(option);
-                            }
-                            let targetThread = option.map((opt: any) => parseInt(opt.command));
-                            requestFrames(targetThread, term);
-                        });
-                    }
+                                if (!option) {
+                                    return;
+                                }
+                                if (!option.length) {
+                                    option = new Array<any>(option);
+                                }
+                                let targetThread = option.map((opt: any) => parseInt(opt.command));
+                                requestFrames(targetThread, term);
+                            });
+                        }
 
-                },
-                (v: string | undefined) => {
-                    // failure?
-                }
-            );
+                    },
+                    (v: string | undefined) => {
+                        // failure?
+                    }
+                );
         } else {
             vscode.window.showWarningMessage(
                 debuggerRunningOrExitedError()

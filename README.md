@@ -22,7 +22,18 @@ and to a custom view under "Run and Debug."
 - I can filter variables by typing in the `Variables` panel under "Run and Debug". How is this different?
   - **The filtering built into vscode does not automatically expand sub-objects. So only objects you have 'unfolded' would be included in your search results. For heavy searching, this is untenable; we need to request the information from the Debug Adapter**.
 
+
+
+## Known Issues
+
+- Occasionally, the "Debugger Search" output channel fails to populate until you select a different output channel (e.g, tasks) then go back. Results should still appear in the "Advanced Variables Search" panel when this happens. See [this github issue](https://github.com/microsoft/vscode/issues/90794).
+
 ### 0.8
 
 Beta release..
+
+
+## Contributing
+
+- Pull requests are welcome. Please document issue reports with screenshots where possible.
 

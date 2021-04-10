@@ -2,7 +2,7 @@
 	"name": "debuggersearch",
 	"displayName": "DebuggerSearch",
 	"description": "",
-	"version": "0.0.1",
+	"version": "0.8.0",
 	"publisher": "BryceSmith",
 	"repository": {
 		"type": "git",

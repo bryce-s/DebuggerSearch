@@ -1,4 +1,5 @@
 import { CommentThreadCollapsibleState } from "vscode";
+import Constants from "./Constants";
 
 export class StackFrameTracker {
     private stackFrames: Array<any> | undefined;
@@ -14,7 +15,7 @@ export class StackFrameTracker {
 }
 
 export class ThreadTracker {
-    public threads: Array<any> | undefined; 
+    public threads: Array<any> | undefined;
 
     // add paused threads to tracker
     public addThreads(threadIds: Array<any>) {
@@ -48,7 +49,7 @@ export class Variable {
     public depthFoundAt: number = 1;
     public nameEntries: Array<string> = new Array<string>();
 
-    constructor(variablesReferenceIn: number, priorDepthIn: number | undefined = undefined, 
+    constructor(variablesReferenceIn: number, priorDepthIn: number | undefined = undefined,
         previousScope: Array<string> | undefined = undefined) {
         this.variablesReference = variablesReferenceIn;
         if (priorDepthIn !== undefined) {
@@ -62,13 +63,13 @@ export class Variable {
 }
 
 export class SearchResult {
-	public variablesReference: number = -1;
+    public variablesReference: number = -1;
     public result: string = '';
     public eval: string = '';
     public path: string = '';
     public pathAsArray: Array<string> = new Array<string>();
     constructor(variablesReferenceIn: number, resultIn: string, evalIn: string, pathIn: string, pathAsArrayIn: Array<string>) {
-		this.variablesReference = variablesReferenceIn;
+        this.variablesReference = variablesReferenceIn;
         this.result = resultIn;
         this.eval = evalIn;
         this.path = pathIn;
@@ -97,7 +98,7 @@ export class VariableInfo {
 
 
 export class VariableSearchLogger {
-    public enabled: boolean = false;
+    public enabled: boolean = Constants.debuggerSearchLoggingEnabled;
 
     public writeLog(content: any): void {
         if (this.enabled) {

@@ -1,6 +1,7 @@
 import { ListenOptions } from 'node:net';
 import { Z_ASCII } from 'node:zlib';
 import * as vscode from 'vscode';
+import Constants from './Constants';
 import SearchResultTreeItem from './SearchResultTreeItem';
 
 export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvider<SearchResultTreeItem> {
@@ -12,7 +13,7 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
 
     private pathToValue: Map<string, string> = new Map<string, string>();
     private scopesToSearchResults: Map<string, any> = new Map<string, any>();
-  
+
     public async refreshTreeView(results: SearchResultTreeItem[] | undefined = undefined): Promise<void> {
         this.clearInternalData();
         // we'll handle the entire update from this function.
@@ -24,7 +25,9 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
         try {
             this._onDidChangeTreeData.fire();
         } catch (e) {
-            console.log(e);
+            if (Constants.debuggerSearchLoggingEnabled) {
+                console.log(e);
+            }
         }
         return;
     }
@@ -40,7 +43,9 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
     }
 
     private buildNamespaceTree(results: SearchResultTreeItem[]): void {
-        console.log(results);
+        if (Constants.debuggerSearchLoggingEnabled) {
+            console.log(results);
+        }
         results.forEach(result => {
             let scopePath = result.scope;
             if (result.pathAsArray === undefined) {
@@ -49,10 +54,10 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
             let scopes: Array<string> = result.pathAsArray;
 
             let activeMap = this.scopesToSearchResults;
-            for (let i = 0; i < scopes.length; i ++) {
+            for (let i = 0; i < scopes.length; i++) {
                 let scope = scopes[i];
                 if (!activeMap.has(scope)) {
-                    activeMap.set(scope, new Map<string,any>());
+                    activeMap.set(scope, new Map<string, any>());
                 }
                 activeMap = activeMap.get(scope);
             }
@@ -68,14 +73,14 @@ export default class DebuggerSearchTreeProvider implements vscode.TreeDataProvid
     // Get TreeItem representation of the element
     // @param element — The element for which TreeItem representation is asked for.
     // @return — TreeItem representation of the element
-    getTreeItem(element: SearchResultTreeItem): vscode.TreeItem  {
+    getTreeItem(element: SearchResultTreeItem): vscode.TreeItem {
         return element;
     }
 
     getValue(pathToHere: string): Thenable<SearchResultTreeItem[]> {
         const value = this.pathToValue.get(pathToHere);
         return Promise.resolve([new SearchResultTreeItem(value || '', undefined, pathToHere, undefined, vscode.TreeItemCollapsibleState.None)]);
-    } 
+    }
     // Get the children of element or root if no element is passed.
     // @param element — The element from which the provider gets children. Can be undefined.
     // @return — Children of element or root if no element is passed.
