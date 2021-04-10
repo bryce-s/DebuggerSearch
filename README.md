@@ -1,8 +1,10 @@
 # Debugger Search
 
-Search a stack frame for values through the Visual Studio Code debugger.
+Search for values through the Visual Studio Code debugger.
 
 ## Features
+
+![](resources/debuggerSearch.gif "Debugger Search Demonstration")
 
 This extension adds eight new commands to Visual Studio Code:
 
