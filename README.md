@@ -1,7 +1,6 @@
 # Debugger Search
 
-Search a stack frame for values through the Visual Studio Code debugger.
-
+Search a stack frame for values in memory through the vscode debugger.
 ## Features
 
 This extension adds eight new commands to Visual Studio Code:
