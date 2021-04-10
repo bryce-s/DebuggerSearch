@@ -14,15 +14,13 @@ and to a custom view under "Run and Debug."
 - **variableSearch.resetParameters** - Reset all search parameters, so they can be chosen again. For example, select a different scope or stack frame.
 - **variableSearch.setScope** - Choose the scope you would like to search in. Example from Python: `Locals`, `Globals`
 - **variableSearch.setSearchType** - Choose the type of search you would like to perform; options include either `contains`, `regex` or `exact match`.
-- **variableSearch.searchForTermFromTree** - Search the debugger from the "Run and Debug" GUI screen  (vscode's debug view). 
-
+- **variableSearch.searchForTermFromTree** - Search the debugger from the "Run and Debug" GUI screen  (vscode's debug view).
+- **variableSearch.cancelSearch** - Cancel the search in progress; also available to trigger from the GUI.
 
 ## FAQ
 
 - I can filter variables by typing in the `Variables` panel under "Run and Debug". How is this different?
   - **The filtering built into vscode does not automatically expand sub-objects. So only objects you have 'unfolded' would be included in your search results. For heavy searching, this is untenable; we need to request the information from the Debug Adapter**.
-
-
 
 ## Known Issues
 
