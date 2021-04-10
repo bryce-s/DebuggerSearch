@@ -7,7 +7,6 @@ import ScopeTraverser from './ScopeTraverser';
 import { SearchCommands } from './SearchCommands';
 import DebuggerSearchTreeProvider from './DebuggerSearchTreeProvider';
 import SearchResultTreeItem from './SearchResultTreeItem';
-import { fail } from 'node:assert';
 
 
 export default class VariableSearchDebugAdapterTracker implements DebugAdapterTracker {
@@ -47,20 +46,9 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
     
     onWillReceiveMessage(message: any) {
         // sending a message to the debug adapter
-
-        if (message.command === Constants.scopes) {
-
-        }
         if (message.command === Constants.variables) {
             VariableSearchDebugAdapterTracker.trackerReference!.logRequest(message.seq, message.arguments.variablesReference);
         }
-
-        if (message.command === Constants.stackTrace) {
-        }
-
-        if (message.command === Constants.threads) {
-        }
-
     }
 
 

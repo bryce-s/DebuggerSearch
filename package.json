@@ -3,6 +3,11 @@
 	"displayName": "DebuggerSearch",
 	"description": "",
 	"version": "0.0.1",
+	"publisher": "BryceSmith",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/bryce-s/DebuggerSearch.git"
+	},
 	"engines": {
 		"vscode": "^1.53.0"
 	},
