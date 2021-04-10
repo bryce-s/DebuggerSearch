@@ -6,7 +6,7 @@ Search for values through the Visual Studio Code debugger.
 
 ![](resources/debuggerSearch.gif "Debugger Search Demonstration")
 
-This extension adds eight new commands to Visual Studio Code:
+This extension adds nine new commands to Visual Studio Code:
 
 - **variableSearch.search** - Search for a term while the debugger is paused. Filters by thread, stack frame and scope. Prints results to a special output channel,
 and to a custom view under "Run and Debug."

@@ -98,6 +98,15 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         if (VariableSearchDebugAdapterTracker.trackerReference !== undefined && reference?.searchInProgress) {
             reference?.cancelSearch();
         }
+        vscode.commands.executeCommand("variableSearch.refreshSearchTree", []).then(
+            (success) => {
+            },
+            (failure) => {
+                if (Constants.debuggerSearchLoggingEnabled) {
+                    console.log(failure);
+                }
+            }
+        );
     }
 
     private debuggerContinuedOrExited(): void {
@@ -108,6 +117,16 @@ export default class VariableSearchDebugAdapterTracker implements DebugAdapterTr
         VariableSearchDebugAdapterTracker.debuggerPaused = false;
         VariableSearchDebugAdapterTracker.resetParameters();
         VariableSearchDebugAdapterTracker._selectedThreads = undefined;
+
+        vscode.commands.executeCommand("variableSearch.refreshSearchTree", []).then(
+            (success) => {
+            },
+            (failure) => {
+                if (Constants.debuggerSearchLoggingEnabled) {
+                    console.log(failure);
+                }
+            }
+        );
     }
 
 
