@@ -5,7 +5,7 @@ Search for values through the Visual Studio Code debugger.
 
 =======
 Search a stack frame for values in memory through the vscode debugger.
->>>>>>> 7bb77cd2f377a9ab66048908f879096aa6a807a9
+
 ## Features
 
 ![](resources/debuggerSearch.gif "Debugger Search Demonstration")
