@@ -2,12 +2,6 @@
 
 Search for values through the Visual Studio Code debugger.
 
-<<<<<<< HEAD
-=======
-=======
-Search a stack frame for values in memory through the vscode debugger.
-
->>>>>>> 51be778cd3a0363b501a38485a2c036605bd9929
 ## Features
 
 ![](resources/debuggerSearch.gif "Debugger Search Demonstration")
