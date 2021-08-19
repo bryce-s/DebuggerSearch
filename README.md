@@ -2,6 +2,8 @@
 
 Search for values through the Visual Studio Code debugger.
 
+This extension is avaliable in the [vscode Marketplace](https://marketplace.visualstudio.com/items?itemName=BryceSmith.debuggersearch). 
+
 ## Features
 
 ![](resources/debuggerSearch.gif "Debugger Search Demonstration")
